@@ -32,12 +32,14 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 <table>
 <thead>
 <tr>
+  <th>Tarih</th>
   <th>İşletme</th>
   <th>İşlem</th>
   <th>Paket</th>
   <th>Birim</th>
   <th>Tutar</th>
   <th>Tahsilat</th>
+  <th>Kalan Bakiye</th>
 </tr>
 </thead>
 <tbody id="liste"></tbody>
@@ -71,6 +73,10 @@ function normalizeIsletme(ad) {
   return ad.trim().toUpperCase();
 }
 
+function bugun() {
+  return new Date().toISOString().slice(0,10);
+}
+
 /* === KAYIT EKLE === */
 function ekle() {
   const isletme = normalizeIsletme(document.getElementById("isletme").value);
@@ -83,37 +89,35 @@ function ekle() {
     return;
   }
 
-  if (paket === 0 && ucret === 0 && tahsilat > 0) {
-    if (!devirler[isletme]) devirler[isletme] = 0;
-    devirler[isletme] -= tahsilat;
+  if (!devirler[isletme]) devirler[isletme] = 0;
 
-    kayitlar.push({
-      Isletme: isletme,
-      Islem: "Devir Tahsilat",
-      Paket: "",
-      Birim: "",
-      Tutar: "",
-      Tahsilat: tahsilat
-    });
+  let islem = "";
+  let tutar = "";
+
+  if (paket === 0 && ucret === 0 && tahsilat > 0) {
+    islem = "Devir Tahsilat";
+    devirler[isletme] -= tahsilat;
   }
   else if (paket > 0 && ucret > 0) {
-    const tutar = paket * ucret;
-    if (!devirler[isletme]) devirler[isletme] = 0;
+    islem = "Teslimat";
+    tutar = paket * ucret;
     devirler[isletme] += tutar - tahsilat;
-
-    kayitlar.push({
-      Isletme: isletme,
-      Islem: "Teslimat",
-      Paket: paket,
-      Birim: ucret,
-      Tutar: tutar,
-      Tahsilat: tahsilat
-    });
   }
   else {
     alert("Teslimat için paket+ücret, tahsilat için sadece tahsilat gir");
     return;
   }
+
+  kayitlar.push({
+    Tarih: bugun(),
+    Isletme: isletme,
+    Islem: islem,
+    Paket: paket || "",
+    Birim: ucret || "",
+    Tutar: tutar || "",
+    Tahsilat: tahsilat || "",
+    KalanBakiye: devirler[isletme]
+  });
 
   localStorage.setItem("gunlukKayitlar", JSON.stringify(kayitlar));
   localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
@@ -127,7 +131,7 @@ function ekle() {
   isletmeDoldur();
 }
 
-/* === GÜNLÜK LİSTE === */
+/* === LİSTELER === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
@@ -135,21 +139,21 @@ function listele() {
   kayitlar.forEach(k => {
     tbody.innerHTML += `
       <tr>
+        <td>${k.Tarih}</td>
         <td>${k.Isletme}</td>
         <td>${k.Islem}</td>
         <td>${k.Paket || "-"}</td>
         <td>${k.Birim || "-"}</td>
         <td>${k.Tutar || "-"}</td>
         <td>${k.Tahsilat || "-"}</td>
+        <td>${k.KalanBakiye} TL</td>
       </tr>`;
   });
 }
 
-/* === DEVİR === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
-
   for (let i in devirler) {
     if (devirler[i] !== 0) {
       tbody.innerHTML += `
@@ -161,87 +165,52 @@ function devirListele() {
   }
 }
 
-/* === İŞLETME SELECT === */
 function isletmeDoldur() {
   const select = document.getElementById("silIsletme");
   const isletmeler = [...new Set(kayitlar.map(k => k.Isletme))];
-
   select.innerHTML = `<option value="">İşletme Seç</option>`;
   isletmeler.forEach(i => {
     select.innerHTML += `<option value="${i}">${i}</option>`;
   });
 }
 
-/* === GÜNLÜK KAYIT SİL === */
+/* === SİLME İŞLEMLERİ === */
 function gunlukKayitSil() {
   const isletme = document.getElementById("silIsletme").value;
-  if (!isletme) {
-    alert("Lütfen işletme seç");
-    return;
-  }
-
-  const onay = confirm(
-    isletme + " işletmesine ait TÜM günlük kayıtlar silinecek.\n\nDevirler etkilenmez.\n\nEmin misiniz?"
-  );
-
-  if (!onay) return;
+  if (!isletme) return alert("İşletme seç");
+  if (!confirm(isletme + " günlük kayıtları silinecek. Emin misin?")) return;
 
   kayitlar = kayitlar.filter(k => k.Isletme !== isletme);
   localStorage.setItem("gunlukKayitlar", JSON.stringify(kayitlar));
-
-  listele();
-  isletmeDoldur();
-
-  alert(isletme + " günlük kayıtları silindi.");
+  listele(); isletmeDoldur();
 }
 
-/* === TÜM DEVİRLERİ SİL === */
 function devirleriSil() {
-  const onay = confirm(
-    "TÜM devreden borçlar silinecek!\n\nBu işlem geri alınamaz.\n\nEmin misiniz?"
-  );
-
-  if (!onay) return;
-
+  if (!confirm("TÜM devirler silinecek. Emin misin?")) return;
   devirler = {};
   localStorage.removeItem("isletmeDevirleri");
-
   devirListele();
-  alert("Tüm devirler sıfırlandı.");
 }
 
 /* === GÜN BİTİR === */
 function gunBitir() {
   const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kayitlar), "Gunluk_Kayitlar");
 
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(kayitlar),
-    "Gunluk_Kayitlar"
-  );
+  const devirSheet = Object.keys(devirler).map(i => ({
+    Isletme: i,
+    KalanDevirTL: devirler[i]
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(devirSheet), "Devirler");
 
-  const devirSheet = [];
-  for (let i in devirler) {
-    devirSheet.push({ Isletme: i, KalanDevirTL: devirler[i] });
-  }
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(devirSheet),
-    "Devirler"
-  );
-
-  const tarih = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
+  XLSX.writeFile(wb, `kurye_${bugun()}.xlsx`);
 
   kayitlar = [];
   localStorage.removeItem("gunlukKayitlar");
-
-  listele();
-  isletmeDoldur();
-  devirListele();
+  listele(); isletmeDoldur(); devirListele();
 }
 
-/* === SAYFA AÇILINCA === */
+/* === AÇILIŞ === */
 listele();
 devirListele();
 isletmeDoldur();
