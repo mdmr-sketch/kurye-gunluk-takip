@@ -9,21 +9,9 @@
 <style>
 body { font-family: Arial, sans-serif; padding: 10px; }
 h3, h4 { margin-top: 20px; }
-input, button {
-  width: 100%;
-  padding: 8px;
-  margin: 5px 0;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
-  text-align: center;
-}
+input, button { width: 100%; padding: 8px; margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 </style>
 </head>
 
@@ -32,9 +20,9 @@ th, td {
 <h3>📦 Kurye Günlük Takip</h3>
 
 <input id="isletme" placeholder="İşletme adı">
-<input id="paket" type="number" placeholder="Atılan paket sayısı">
-<input id="ucret" type="number" placeholder="Paket ücreti (TL)">
-<input id="tahsilat" type="number" placeholder="Tahsil edilen (opsiyonel)">
+<input id="paket" type="number" placeholder="Atılan paket sayısı (tahsilatta boş)">
+<input id="ucret" type="number" placeholder="Paket ücreti (tahsilatta boş)">
+<input id="tahsilat" type="number" placeholder="Tahsil edilen (TL)">
 
 <button onclick="ekle()">➕ Kaydet</button>
 
@@ -43,6 +31,7 @@ th, td {
 <thead>
 <tr>
   <th>İşletme</th>
+  <th>İşlem</th>
   <th>Paket</th>
   <th>Birim</th>
   <th>Tutar</th>
@@ -70,36 +59,54 @@ th, td {
 <button onclick="gunBitir()">📥 Günü Bitir & Excel</button>
 
 <script>
-/* === VERİLER === */
 let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
 let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
 
-/* === KAYIT EKLE === */
 function ekle() {
   const isletme = document.getElementById("isletme").value;
-  const paket = Number(document.getElementById("paket").value);
-  const ucret = Number(document.getElementById("ucret").value);
+  const paket = Number(document.getElementById("paket").value || 0);
+  const ucret = Number(document.getElementById("ucret").value || 0);
   const tahsilat = Number(document.getElementById("tahsilat").value || 0);
 
-  if (!isletme || paket <= 0 || ucret <= 0) {
-    alert("İşletme, paket ve ücret zorunludur");
+  if (!isletme) {
+    alert("İşletme adı zorunlu");
     return;
   }
 
-  const tutar = paket * ucret;
+  /* === SADECE DEVİR TAHSİLATI === */
+  if (paket === 0 && ucret === 0 && tahsilat > 0) {
+    if (!devirler[isletme]) devirler[isletme] = 0;
+    devirler[isletme] -= tahsilat;
 
-  if (!devirler[isletme]) devirler[isletme] = 0;
-  devirler[isletme] += tutar - tahsilat;
+    kayitlar.push({
+      Isletme: isletme,
+      Islem: "Devir Tahsilat",
+      Paket: "",
+      BirimUcret: "",
+      TutarTL: "",
+      TahsilatTL: tahsilat
+    });
+  }
+  /* === TESLİMAT === */
+  else if (paket > 0 && ucret > 0) {
+    const tutar = paket * ucret;
+    if (!devirler[isletme]) devirler[isletme] = 0;
+    devirler[isletme] += tutar - tahsilat;
 
-  kayitlar.push({
-    Isletme: isletme,
-    Paket: paket,
-    BirimUcret: ucret,
-    TutarTL: tutar,
-    TahsilatTL: tahsilat
-  });
+    kayitlar.push({
+      Isletme: isletme,
+      Islem: "Teslimat",
+      Paket: paket,
+      BirimUcret: ucret,
+      TutarTL: tutar,
+      TahsilatTL: tahsilat
+    });
+  }
+  else {
+    alert("Teslimat için paket+ücret, tahsilat için sadece tahsilat gir");
+    return;
+  }
 
-  /* OTOMATİK KAYDET */
   localStorage.setItem("gunlukKayitlar", JSON.stringify(kayitlar));
   localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
 
@@ -111,25 +118,24 @@ function ekle() {
   devirListele();
 }
 
-/* === GÜNLÜK LİSTE === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
-
   let toplamP = 0;
   let toplamT = 0;
 
   kayitlar.forEach(k => {
-    toplamP += k.Paket;
-    toplamT += k.TutarTL;
+    if (k.Paket) toplamP += Number(k.Paket);
+    if (k.TutarTL) toplamT += Number(k.TutarTL);
 
     tbody.innerHTML += `
       <tr>
         <td>${k.Isletme}</td>
-        <td>${k.Paket}</td>
-        <td>${k.BirimUcret}</td>
-        <td>${k.TutarTL}</td>
-        <td>${k.TahsilatTL}</td>
+        <td>${k.Islem}</td>
+        <td>${k.Paket || "-"}</td>
+        <td>${k.BirimUcret || "-"}</td>
+        <td>${k.TutarTL || "-"}</td>
+        <td>${k.TahsilatTL || "-"}</td>
       </tr>`;
   });
 
@@ -137,41 +143,34 @@ function listele() {
   document.getElementById("toplamTL").innerText = toplamT;
 }
 
-/* === DEVİR LİSTESİ === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
 
-  for (let isletme in devirler) {
-    if (devirler[isletme] !== 0) {
+  for (let i in devirler) {
+    if (devirler[i] !== 0) {
       tbody.innerHTML += `
         <tr>
-          <td>${isletme}</td>
-          <td>${devirler[isletme]} TL</td>
+          <td>${i}</td>
+          <td>${devirler[i]} TL</td>
         </tr>`;
     }
   }
 }
 
-/* === GÜN BİTİR === */
 function gunBitir() {
   const wb = XLSX.utils.book_new();
-
-  const ws1 = XLSX.utils.json_to_sheet(kayitlar);
-  XLSX.utils.book_append_sheet(wb, ws1, "Gunluk_Kayitlar");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kayitlar), "Gunluk_Kayitlar");
 
   const devirSheet = [];
   for (let i in devirler) {
     devirSheet.push({ Isletme: i, KalanDevirTL: devirler[i] });
   }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(devirSheet), "Devirler");
 
-  const ws2 = XLSX.utils.json_to_sheet(devirSheet);
-  XLSX.utils.book_append_sheet(wb, ws2, "Devirler");
-
-  const tarih = new Date().toISOString().slice(0, 10);
+  const tarih = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
 
-  /* SADECE GÜNLÜK KAYITLARI SIFIRLA */
   kayitlar = [];
   localStorage.removeItem("gunlukKayitlar");
 
@@ -179,7 +178,6 @@ function gunBitir() {
   devirListele();
 }
 
-/* === SAYFA AÇILINCA === */
 listele();
 devirListele();
 </script>
