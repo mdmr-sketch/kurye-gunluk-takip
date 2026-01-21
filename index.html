@@ -9,10 +9,11 @@
 <style>
 body { font-family: Arial, sans-serif; padding: 10px; }
 h3, h4 { margin-top: 20px; }
-input, button { width: 100%; padding: 8px; margin: 5px 0; }
+input, button, select { width: 100%; padding: 8px; margin: 5px 0; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 .danger { background:#d9534f; color:#fff; border:none; }
+.warning { background:#f0ad4e; color:#fff; border:none; }
 </style>
 </head>
 
@@ -41,6 +42,10 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 </thead>
 <tbody id="liste"></tbody>
 </table>
+
+<h4>🧹 Günlük Kayıt Sil</h4>
+<select id="silIsletme"></select>
+<button class="warning" onclick="gunlukKayitSil()">🗑️ Seçili İşletmenin Günlük Kayıtlarını Sil</button>
 
 <h4>🔁 Devreden Borçlar</h4>
 <table>
@@ -119,9 +124,10 @@ function ekle() {
 
   listele();
   devirListele();
+  isletmeDoldur();
 }
 
-/* === LİSTELER === */
+/* === GÜNLÜK LİSTE === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
@@ -139,6 +145,7 @@ function listele() {
   });
 }
 
+/* === DEVİR === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
@@ -154,6 +161,40 @@ function devirListele() {
   }
 }
 
+/* === İŞLETME SELECT === */
+function isletmeDoldur() {
+  const select = document.getElementById("silIsletme");
+  const isletmeler = [...new Set(kayitlar.map(k => k.Isletme))];
+
+  select.innerHTML = `<option value="">İşletme Seç</option>`;
+  isletmeler.forEach(i => {
+    select.innerHTML += `<option value="${i}">${i}</option>`;
+  });
+}
+
+/* === GÜNLÜK KAYIT SİL === */
+function gunlukKayitSil() {
+  const isletme = document.getElementById("silIsletme").value;
+  if (!isletme) {
+    alert("Lütfen işletme seç");
+    return;
+  }
+
+  const onay = confirm(
+    isletme + " işletmesine ait TÜM günlük kayıtlar silinecek.\n\nDevirler etkilenmez.\n\nEmin misiniz?"
+  );
+
+  if (!onay) return;
+
+  kayitlar = kayitlar.filter(k => k.Isletme !== isletme);
+  localStorage.setItem("gunlukKayitlar", JSON.stringify(kayitlar));
+
+  listele();
+  isletmeDoldur();
+
+  alert(isletme + " günlük kayıtları silindi.");
+}
+
 /* === TÜM DEVİRLERİ SİL === */
 function devirleriSil() {
   const onay = confirm(
@@ -166,7 +207,7 @@ function devirleriSil() {
   localStorage.removeItem("isletmeDevirleri");
 
   devirListele();
-  alert("Tüm devirler başarıyla sıfırlandı.");
+  alert("Tüm devirler sıfırlandı.");
 }
 
 /* === GÜN BİTİR === */
@@ -196,12 +237,14 @@ function gunBitir() {
   localStorage.removeItem("gunlukKayitlar");
 
   listele();
+  isletmeDoldur();
   devirListele();
 }
 
 /* === SAYFA AÇILINCA === */
 listele();
 devirListele();
+isletmeDoldur();
 </script>
 
 </body>
