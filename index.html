@@ -70,10 +70,11 @@ th, td {
 <button onclick="gunBitir()">📥 Günü Bitir & Excel</button>
 
 <script>
-let kayitlar = [];
+/* === VERİLER === */
+let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
 let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
 
-/* KAYIT EKLE */
+/* === KAYIT EKLE === */
 function ekle() {
   const isletme = document.getElementById("isletme").value;
   const paket = Number(document.getElementById("paket").value);
@@ -98,6 +99,10 @@ function ekle() {
     TahsilatTL: tahsilat
   });
 
+  /* OTOMATİK KAYDET */
+  localStorage.setItem("gunlukKayitlar", JSON.stringify(kayitlar));
+  localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
+
   document.getElementById("paket").value = "";
   document.getElementById("ucret").value = "";
   document.getElementById("tahsilat").value = "";
@@ -106,7 +111,7 @@ function ekle() {
   devirListele();
 }
 
-/* GÜNLÜK LİSTE */
+/* === GÜNLÜK LİSTE === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
@@ -132,7 +137,7 @@ function listele() {
   document.getElementById("toplamTL").innerText = toplamT;
 }
 
-/* DEVİR LİSTESİ */
+/* === DEVİR LİSTESİ === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
@@ -148,7 +153,7 @@ function devirListele() {
   }
 }
 
-/* GÜN BİTİR + EXCEL */
+/* === GÜN BİTİR === */
 function gunBitir() {
   const wb = XLSX.utils.book_new();
 
@@ -157,10 +162,7 @@ function gunBitir() {
 
   const devirSheet = [];
   for (let i in devirler) {
-    devirSheet.push({
-      Isletme: i,
-      KalanDevirTL: devirler[i]
-    });
+    devirSheet.push({ Isletme: i, KalanDevirTL: devirler[i] });
   }
 
   const ws2 = XLSX.utils.json_to_sheet(devirSheet);
@@ -169,14 +171,16 @@ function gunBitir() {
   const tarih = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
 
-  localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
-
+  /* SADECE GÜNLÜK KAYITLARI SIFIRLA */
   kayitlar = [];
+  localStorage.removeItem("gunlukKayitlar");
+
   listele();
   devirListele();
 }
 
-/* SAYFA AÇILINCA */
+/* === SAYFA AÇILINCA === */
+listele();
 devirListele();
 </script>
 
