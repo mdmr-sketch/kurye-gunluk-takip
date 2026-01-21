@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Kurye Günlük Takip</title>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
@@ -29,12 +30,12 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 <table>
 <thead>
 <tr>
-<th>İşletme</th>
-<th>İşlem</th>
-<th>Paket</th>
-<th>Birim</th>
-<th>Tutar</th>
-<th>Tahsilat</th>
+  <th>İşletme</th>
+  <th>İşlem</th>
+  <th>Paket</th>
+  <th>Birim</th>
+  <th>Tutar</th>
+  <th>Tahsilat</th>
 </tr>
 </thead>
 <tbody id="liste"></tbody>
@@ -44,24 +45,30 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 <table>
 <thead>
 <tr>
-<th>İşletme</th>
-<th>Kalan Devir (TL)</th>
+  <th>İşletme</th>
+  <th>Kalan Devir (TL)</th>
 </tr>
 </thead>
 <tbody id="devirListe"></tbody>
 </table>
 
+<h4>📊 Gün Sonu</h4>
+<button onclick="gunBitir()">📥 Günü Bitir & Excel İndir</button>
+
 <script>
+/* === VERİLER === */
 let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
 let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
 
+/* === STANDART İŞLETME ADI === */
 function normalizeIsletme(ad) {
   return ad.trim().toUpperCase();
 }
 
+/* === KAYIT EKLE === */
 function ekle() {
-  let isletmeRaw = document.getElementById("isletme").value;
-  const isletme = normalizeIsletme(isletmeRaw);
+  const isletmeInput = document.getElementById("isletme").value;
+  const isletme = normalizeIsletme(isletmeInput);
 
   const paket = Number(document.getElementById("paket").value || 0);
   const ucret = Number(document.getElementById("ucret").value || 0);
@@ -72,7 +79,7 @@ function ekle() {
     return;
   }
 
-  /* SADECE DEVİR TAHSİLATI */
+  /* === SADECE DEVİR TAHSİLATI === */
   if (paket === 0 && ucret === 0 && tahsilat > 0) {
     if (!devirler[isletme]) devirler[isletme] = 0;
     devirler[isletme] -= tahsilat;
@@ -86,7 +93,7 @@ function ekle() {
       Tahsilat: tahsilat
     });
   }
-  /* TESLİMAT */
+  /* === TESLİMAT === */
   else if (paket > 0 && ucret > 0) {
     const tutar = paket * ucret;
     if (!devirler[isletme]) devirler[isletme] = 0;
@@ -117,6 +124,7 @@ function ekle() {
   devirListele();
 }
 
+/* === GÜNLÜK LİSTE === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
@@ -134,6 +142,7 @@ function listele() {
   });
 }
 
+/* === DEVİR LİSTESİ === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
@@ -149,6 +158,35 @@ function devirListele() {
   }
 }
 
+/* === GÜN BİTİR & EXCEL === */
+function gunBitir() {
+  const wb = XLSX.utils.book_new();
+
+  const ws1 = XLSX.utils.json_to_sheet(kayitlar);
+  XLSX.utils.book_append_sheet(wb, ws1, "Gunluk_Kayitlar");
+
+  const devirSheet = [];
+  for (let i in devirler) {
+    devirSheet.push({
+      Isletme: i,
+      KalanDevirTL: devirler[i]
+    });
+  }
+  const ws2 = XLSX.utils.json_to_sheet(devirSheet);
+  XLSX.utils.book_append_sheet(wb, ws2, "Devirler");
+
+  const tarih = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
+
+  /* Günlük kayıtları sıfırla */
+  kayitlar = [];
+  localStorage.removeItem("gunlukKayitlar");
+
+  listele();
+  devirListele();
+}
+
+/* === SAYFA AÇILINCA === */
 listele();
 devirListele();
 </script>
