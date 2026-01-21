@@ -115,26 +115,44 @@ function listele() {
 }
 
 function gunBitir() {
-  const excelData = [];
 
+  /* 1️⃣ GÜNLÜK KAYITLAR */
+  const gunlukSheet = kayitlar.map(k => ({
+    Isletme: k.Isletme,
+    IslemTuru: k.Tur,
+    PaketSayisi: k.Paket,
+    BirimUcret: k.Birim,
+    TutarTL: k.Tutar
+  }));
+
+  /* 2️⃣ DEVİR DURUMU */
+  const devirSheet = [];
   for (const isletme in devirler) {
-    excelData.push({
+    devirSheet.push({
       Isletme: isletme,
       KalanDevirTL: devirler[isletme]
     });
   }
 
+  /* EXCEL OLUŞTUR */
+  const wb = XLSX.utils.book_new();
+
+  const ws1 = XLSX.utils.json_to_sheet(gunlukSheet);
+  XLSX.utils.book_append_sheet(wb, ws1, "Gunluk_Kayitlar");
+
+  const ws2 = XLSX.utils.json_to_sheet(devirSheet);
+  XLSX.utils.book_append_sheet(wb, ws2, "Devirler");
+
+  /* KAYDET */
   localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
 
-  const ws = XLSX.utils.json_to_sheet(excelData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Devirler");
+  const tarih = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `gunluk_kurye_${tarih}.xlsx`);
 
-  const tarih = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `devir_durumu_${tarih}.xlsx`);
-
+  /* GÜN SIFIRLA */
   kayitlar = [];
   listele();
+}
 }
 </script>
 
