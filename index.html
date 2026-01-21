@@ -6,19 +6,27 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input, button { padding: 8px; margin: 5px 0; width: 100%; }
-    ul { padding-left: 20px; }
+    input, button { padding: 8px; margin: 6px 0; width: 100%; }
+    .toplam { font-weight: bold; margin-top: 10px; }
+    .panel { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
 <h2>Kurye Günlük Takip</h2>
 
+<div class="panel">
+  <b>Devresen Ayarları (Opsiyonel)</b>
+  <input id="carpan" type="number" min="1" placeholder="1 paket kaç sipariş? (Boş = 1)">
+</div>
+
 <input id="isletme" placeholder="İşletme Adı">
 <input id="paket" type="number" min="1" value="1">
 
 <button onclick="kaydet()">Kaydet</button>
 <button onclick="gunBitir()">Günü Bitir & Excel</button>
+
+<div class="toplam" id="toplamYazi"></div>
 
 <ul id="liste"></ul>
 
@@ -27,14 +35,20 @@ let kayitlar = [];
 
 function kaydet() {
   const isletme = document.getElementById("isletme").value;
-  const paket = document.getElementById("paket").value;
+  const paket = Number(document.getElementById("paket").value);
+  let carpan = Number(document.getElementById("carpan").value);
 
   if (!isletme) return;
+  if (!carpan || carpan <= 0) carpan = 1;
+
+  const siparis = paket * carpan;
 
   kayitlar.push({
     Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
-    Paket: paket
+    Paket: paket,
+    Carpan: carpan,
+    Siparis: siparis
   });
 
   document.getElementById("isletme").value = "";
@@ -46,15 +60,41 @@ function kaydet() {
 function listele() {
   const ul = document.getElementById("liste");
   ul.innerHTML = "";
+
+  let toplamPaket = 0;
+  let toplamSiparis = 0;
+
   kayitlar.forEach(k => {
+    toplamPaket += k.Paket;
+    toplamSiparis += k.Siparis;
+
     const li = document.createElement("li");
-    li.textContent = `${k.Isletme} - ${k.Paket}`;
+    li.textContent = `${k.Isletme} → ${k.Paket} x ${k.Carpan} = ${k.Siparis}`;
     ul.appendChild(li);
   });
+
+  document.getElementById("toplamYazi").innerText =
+    `Toplam Paket: ${toplamPaket} | Toplam Sipariş: ${toplamSiparis}`;
 }
 
 function gunBitir() {
   if (kayitlar.length === 0) return;
+
+  let toplamPaket = 0;
+  let toplamSiparis = 0;
+
+  kayitlar.forEach(k => {
+    toplamPaket += k.Paket;
+    toplamSiparis += k.Siparis;
+  });
+
+  kayitlar.push({
+    Tarih: "",
+    Isletme: "GENEL TOPLAM",
+    Paket: toplamPaket,
+    Carpan: "",
+    Siparis: toplamSiparis
+  });
 
   const ws = XLSX.utils.json_to_sheet(kayitlar);
   const wb = XLSX.utils.book_new();
