@@ -12,6 +12,7 @@ h3, h4 { margin-top: 20px; }
 input, button { width: 100%; padding: 8px; margin: 5px 0; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+.danger { background:#d9534f; color:#fff; border:none; }
 </style>
 </head>
 
@@ -52,24 +53,22 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 <tbody id="devirListe"></tbody>
 </table>
 
+<button class="danger" onclick="devirleriSil()">🗑️ Tüm Devirleri Sıfırla</button>
+
 <h4>📊 Gün Sonu</h4>
 <button onclick="gunBitir()">📥 Günü Bitir & Excel İndir</button>
 
 <script>
-/* === VERİLER === */
 let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
 let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
 
-/* === STANDART İŞLETME ADI === */
 function normalizeIsletme(ad) {
   return ad.trim().toUpperCase();
 }
 
 /* === KAYIT EKLE === */
 function ekle() {
-  const isletmeInput = document.getElementById("isletme").value;
-  const isletme = normalizeIsletme(isletmeInput);
-
+  const isletme = normalizeIsletme(document.getElementById("isletme").value);
   const paket = Number(document.getElementById("paket").value || 0);
   const ucret = Number(document.getElementById("ucret").value || 0);
   const tahsilat = Number(document.getElementById("tahsilat").value || 0);
@@ -79,7 +78,6 @@ function ekle() {
     return;
   }
 
-  /* === SADECE DEVİR TAHSİLATI === */
   if (paket === 0 && ucret === 0 && tahsilat > 0) {
     if (!devirler[isletme]) devirler[isletme] = 0;
     devirler[isletme] -= tahsilat;
@@ -93,7 +91,6 @@ function ekle() {
       Tahsilat: tahsilat
     });
   }
-  /* === TESLİMAT === */
   else if (paket > 0 && ucret > 0) {
     const tutar = paket * ucret;
     if (!devirler[isletme]) devirler[isletme] = 0;
@@ -124,7 +121,7 @@ function ekle() {
   devirListele();
 }
 
-/* === GÜNLÜK LİSTE === */
+/* === LİSTELER === */
 function listele() {
   const tbody = document.getElementById("liste");
   tbody.innerHTML = "";
@@ -142,7 +139,6 @@ function listele() {
   });
 }
 
-/* === DEVİR LİSTESİ === */
 function devirListele() {
   const tbody = document.getElementById("devirListe");
   tbody.innerHTML = "";
@@ -158,27 +154,44 @@ function devirListele() {
   }
 }
 
-/* === GÜN BİTİR & EXCEL === */
+/* === TÜM DEVİRLERİ SİL === */
+function devirleriSil() {
+  const onay = confirm(
+    "TÜM devreden borçlar silinecek!\n\nBu işlem geri alınamaz.\n\nEmin misiniz?"
+  );
+
+  if (!onay) return;
+
+  devirler = {};
+  localStorage.removeItem("isletmeDevirleri");
+
+  devirListele();
+  alert("Tüm devirler başarıyla sıfırlandı.");
+}
+
+/* === GÜN BİTİR === */
 function gunBitir() {
   const wb = XLSX.utils.book_new();
 
-  const ws1 = XLSX.utils.json_to_sheet(kayitlar);
-  XLSX.utils.book_append_sheet(wb, ws1, "Gunluk_Kayitlar");
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(kayitlar),
+    "Gunluk_Kayitlar"
+  );
 
   const devirSheet = [];
   for (let i in devirler) {
-    devirSheet.push({
-      Isletme: i,
-      KalanDevirTL: devirler[i]
-    });
+    devirSheet.push({ Isletme: i, KalanDevirTL: devirler[i] });
   }
-  const ws2 = XLSX.utils.json_to_sheet(devirSheet);
-  XLSX.utils.book_append_sheet(wb, ws2, "Devirler");
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(devirSheet),
+    "Devirler"
+  );
 
   const tarih = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
 
-  /* Günlük kayıtları sıfırla */
   kayitlar = [];
   localStorage.removeItem("gunlukKayitlar");
 
