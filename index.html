@@ -3,20 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <title>Kurye Günlük Takip</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { padding: 8px; margin: 5px 0; width: 100%; }
+    ul { padding-left: 20px; }
+  </style>
 </head>
 <body>
 
 <h2>Kurye Günlük Takip</h2>
 
-<form>
-  <input placeholder="İşletme Adı"><br><br>
-  <input type="number" placeholder="Paket Sayısı"><br><br>
-</form>
+<input id="isletme" placeholder="İşletme Adı">
+<input id="paket" type="number" min="1" value="1">
 
-<p>
-Bu sayfa GitHub ile oluşturuldu.<br>
-Bilgisayar geldiğinde burayı geliştireceğiz.
-</p>
+<button onclick="kaydet()">Kaydet</button>
+<button onclick="gunBitir()">Günü Bitir & Excel</button>
+
+<ul id="liste"></ul>
+
+<script>
+let kayitlar = [];
+
+function kaydet() {
+  const isletme = document.getElementById("isletme").value;
+  const paket = document.getElementById("paket").value;
+
+  if (!isletme) return;
+
+  kayitlar.push({
+    Tarih: new Date().toISOString().slice(0,10),
+    Isletme: isletme,
+    Paket: paket
+  });
+
+  document.getElementById("isletme").value = "";
+  document.getElementById("paket").value = 1;
+
+  listele();
+}
+
+function listele() {
+  const ul = document.getElementById("liste");
+  ul.innerHTML = "";
+  kayitlar.forEach(k => {
+    const li = document.createElement("li");
+    li.textContent = `${k.Isletme} - ${k.Paket}`;
+    ul.appendChild(li);
+  });
+}
+
+function gunBitir() {
+  if (kayitlar.length === 0) return;
+
+  const ws = XLSX.utils.json_to_sheet(kayitlar);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Rapor");
+
+  const tarih = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `kurye_rapor_${tarih}.xlsx`);
+
+  kayitlar = [];
+  listele();
+}
+</script>
 
 </body>
 </html>
