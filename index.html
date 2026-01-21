@@ -18,22 +18,19 @@
 <div class="panel">
   <b>Kayıt Türü</b>
   <select id="tur">
-    <option value="normal">Normal Teslimat</option>
+    <option value="teslimat">Teslimat</option>
     <option value="devreden">Devreden Ödeme</option>
   </select>
 </div>
 
 <input id="isletme" placeholder="İşletme Adı">
-
 <input id="paket" type="number" min="0" placeholder="Atılan Paket Sayısı">
-
-<input id="ucret" type="number" min="0" placeholder="Paket Ücreti (TL)">
+<input id="ucret" type="number" min="0" placeholder="Paket Ücreti / Devreden Tutar">
 
 <button onclick="kaydet()">Kaydet</button>
 <button onclick="gunBitir()">Günü Bitir & Excel</button>
 
 <div class="toplam" id="toplamYazi"></div>
-
 <ul id="liste"></ul>
 
 <script>
@@ -47,24 +44,14 @@ function kaydet() {
 
   if (!isletme) return;
 
-  let toplam = 0;
-  let paketSayisi = paket;
-
-  if (tur === "normal") {
-    toplam = paket * ucret;
-  } else {
-    // devreden ödeme
-    toplam = ucret;
-    paketSayisi = 0;
-  }
+  const toplam = tur === "teslimat" ? paket * ucret : ucret;
 
   kayitlar.push({
-    Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
-    Tur: tur === "normal" ? "Teslimat" : "Devreden",
-    Paket: paketSayisi,
-    PaketUcreti: tur === "normal" ? ucret : "",
-    ToplamTL: toplam
+    Tur: tur,
+    Paket: tur === "teslimat" ? paket : 0,
+    Birim: tur === "teslimat" ? ucret : "",
+    Tutar: toplam
   });
 
   document.getElementById("isletme").value = "";
@@ -75,22 +62,20 @@ function kaydet() {
 }
 
 function listele() {
+  let toplamPaket = 0;
+  let toplamTutar = 0;
   const ul = document.getElementById("liste");
   ul.innerHTML = "";
 
-  let toplamPaket = 0;
-  let toplamTutar = 0;
-
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
-    toplamTutar += k.ToplamTL;
+    toplamTutar += k.Tutar;
 
     const li = document.createElement("li");
-    if (k.Tur === "Teslimat") {
-      li.textContent = `${k.Isletme} → ${k.Paket} paket x ${k.PaketUcreti} TL = ${k.ToplamTL} TL`;
-    } else {
-      li.textContent = `${k.Isletme} → Devreden Ödeme: ${k.ToplamTL} TL`;
-    }
+    li.textContent =
+      k.Tur === "teslimat"
+      ? `${k.Isletme} → ${k.Paket} x ${k.Birim} TL = ${k.Tutar} TL`
+      : `${k.Isletme} → Devreden: ${k.Tutar} TL`;
     ul.appendChild(li);
   });
 
@@ -101,24 +86,57 @@ function listele() {
 function gunBitir() {
   if (kayitlar.length === 0) return;
 
-  let toplamPaket = 0;
-  let toplamTutar = 0;
+  const gruplu = {};
+  let genelPaket = 0;
+  let genelTutar = 0;
 
   kayitlar.forEach(k => {
-    toplamPaket += k.Paket;
-    toplamTutar += k.ToplamTL;
+    if (!gruplu[k.Isletme]) {
+      gruplu[k.Isletme] = [];
+    }
+    gruplu[k.Isletme].push(k);
   });
 
-  kayitlar.push({
-    Tarih: "",
+  const excelData = [];
+
+  for (const isletme in gruplu) {
+    let isletmePaket = 0;
+    let isletmeTutar = 0;
+
+    gruplu[isletme].forEach(k => {
+      isletmePaket += k.Paket;
+      isletmeTutar += k.Tutar;
+
+      excelData.push({
+        Isletme: isletme,
+        Tur: k.Tur === "teslimat" ? "Teslimat" : "Devreden",
+        Paket: k.Paket,
+        BirimTL: k.Birim,
+        TutarTL: k.Tutar
+      });
+    });
+
+    excelData.push({
+      Isletme: isletme,
+      Tur: "TOPLAM",
+      Paket: isletmePaket,
+      BirimTL: "",
+      TutarTL: isletmeTutar
+    });
+
+    genelPaket += isletmePaket;
+    genelTutar += isletmeTutar;
+  }
+
+  excelData.push({
     Isletme: "GENEL TOPLAM",
     Tur: "",
-    Paket: toplamPaket,
-    PaketUcreti: "",
-    ToplamTL: toplamTutar
+    Paket: genelPaket,
+    BirimTL: "",
+    TutarTL: genelTutar
   });
 
-  const ws = XLSX.utils.json_to_sheet(kayitlar);
+  const ws = XLSX.utils.json_to_sheet(excelData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Rapor");
 
