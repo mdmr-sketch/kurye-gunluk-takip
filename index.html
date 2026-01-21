@@ -16,8 +16,8 @@
 <h2>Kurye Günlük Takip</h2>
 
 <div class="panel">
-  <b>Devresen Ayarları (Opsiyonel)</b>
-  <input id="carpan" type="number" min="1" placeholder="1 paket kaç sipariş? (Boş = 1)">
+  <b>Fiyat Ayarı (Opsiyonel)</b>
+  <input id="birimFiyat" type="number" min="0" placeholder="1 ürün kaç TL? (Boş = 0)">
 </div>
 
 <input id="isletme" placeholder="İşletme Adı">
@@ -36,19 +36,19 @@ let kayitlar = [];
 function kaydet() {
   const isletme = document.getElementById("isletme").value;
   const paket = Number(document.getElementById("paket").value);
-  let carpan = Number(document.getElementById("carpan").value);
+  let birim = Number(document.getElementById("birimFiyat").value);
 
   if (!isletme) return;
-  if (!carpan || carpan <= 0) carpan = 1;
+  if (!birim || birim < 0) birim = 0;
 
-  const siparis = paket * carpan;
+  const tutar = paket * birim;
 
   kayitlar.push({
     Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
     Paket: paket,
-    Carpan: carpan,
-    Siparis: siparis
+    BirimTL: birim,
+    TutarTL: tutar
   });
 
   document.getElementById("isletme").value = "";
@@ -62,38 +62,38 @@ function listele() {
   ul.innerHTML = "";
 
   let toplamPaket = 0;
-  let toplamSiparis = 0;
+  let toplamTutar = 0;
 
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
-    toplamSiparis += k.Siparis;
+    toplamTutar += k.TutarTL;
 
     const li = document.createElement("li");
-    li.textContent = `${k.Isletme} → ${k.Paket} x ${k.Carpan} = ${k.Siparis}`;
+    li.textContent = `${k.Isletme} → ${k.Paket} x ${k.BirimTL} TL = ${k.TutarTL} TL`;
     ul.appendChild(li);
   });
 
   document.getElementById("toplamYazi").innerText =
-    `Toplam Paket: ${toplamPaket} | Toplam Sipariş: ${toplamSiparis}`;
+    `Toplam Paket: ${toplamPaket} | Günlük Toplam Tutar: ${toplamTutar} TL`;
 }
 
 function gunBitir() {
   if (kayitlar.length === 0) return;
 
   let toplamPaket = 0;
-  let toplamSiparis = 0;
+  let toplamTutar = 0;
 
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
-    toplamSiparis += k.Siparis;
+    toplamTutar += k.TutarTL;
   });
 
   kayitlar.push({
     Tarih: "",
     Isletme: "GENEL TOPLAM",
     Paket: toplamPaket,
-    Carpan: "",
-    Siparis: toplamSiparis
+    BirimTL: "",
+    TutarTL: toplamTutar
   });
 
   const ws = XLSX.utils.json_to_sheet(kayitlar);
