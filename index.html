@@ -6,7 +6,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
-    input, button { padding: 8px; margin: 6px 0; width: 100%; }
+    input, button, select { padding: 8px; margin: 6px 0; width: 100%; }
     .toplam { font-weight: bold; margin-top: 10px; }
     .panel { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
   </style>
@@ -16,12 +16,18 @@
 <h2>Kurye Günlük Takip</h2>
 
 <div class="panel">
-  <b>Fiyat Ayarı (Opsiyonel)</b>
-  <input id="birimFiyat" type="number" min="0" placeholder="1 ürün kaç TL? (Boş = 0)">
+  <b>Kayıt Türü</b>
+  <select id="tur">
+    <option value="normal">Normal Teslimat</option>
+    <option value="devreden">Devreden Ödeme</option>
+  </select>
 </div>
 
 <input id="isletme" placeholder="İşletme Adı">
-<input id="paket" type="number" min="1" value="1">
+
+<input id="paket" type="number" min="0" placeholder="Atılan Paket Sayısı">
+
+<input id="ucret" type="number" min="0" placeholder="Paket Ücreti (TL)">
 
 <button onclick="kaydet()">Kaydet</button>
 <button onclick="gunBitir()">Günü Bitir & Excel</button>
@@ -36,23 +42,34 @@ let kayitlar = [];
 function kaydet() {
   const isletme = document.getElementById("isletme").value;
   const paket = Number(document.getElementById("paket").value);
-  let birim = Number(document.getElementById("birimFiyat").value);
+  const ucret = Number(document.getElementById("ucret").value);
+  const tur = document.getElementById("tur").value;
 
   if (!isletme) return;
-  if (!birim || birim < 0) birim = 0;
 
-  const tutar = paket * birim;
+  let toplam = 0;
+  let paketSayisi = paket;
+
+  if (tur === "normal") {
+    toplam = paket * ucret;
+  } else {
+    // devreden ödeme
+    toplam = ucret;
+    paketSayisi = 0;
+  }
 
   kayitlar.push({
     Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
-    Paket: paket,
-    BirimTL: birim,
-    TutarTL: tutar
+    Tur: tur === "normal" ? "Teslimat" : "Devreden",
+    Paket: paketSayisi,
+    PaketUcreti: tur === "normal" ? ucret : "",
+    ToplamTL: toplam
   });
 
   document.getElementById("isletme").value = "";
-  document.getElementById("paket").value = 1;
+  document.getElementById("paket").value = "";
+  document.getElementById("ucret").value = "";
 
   listele();
 }
@@ -66,15 +83,19 @@ function listele() {
 
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
-    toplamTutar += k.TutarTL;
+    toplamTutar += k.ToplamTL;
 
     const li = document.createElement("li");
-    li.textContent = `${k.Isletme} → ${k.Paket} x ${k.BirimTL} TL = ${k.TutarTL} TL`;
+    if (k.Tur === "Teslimat") {
+      li.textContent = `${k.Isletme} → ${k.Paket} paket x ${k.PaketUcreti} TL = ${k.ToplamTL} TL`;
+    } else {
+      li.textContent = `${k.Isletme} → Devreden Ödeme: ${k.ToplamTL} TL`;
+    }
     ul.appendChild(li);
   });
 
   document.getElementById("toplamYazi").innerText =
-    `Toplam Paket: ${toplamPaket} | Günlük Toplam Tutar: ${toplamTutar} TL`;
+    `Toplam Paket: ${toplamPaket} | Günlük Toplam Alacak: ${toplamTutar} TL`;
 }
 
 function gunBitir() {
@@ -85,15 +106,16 @@ function gunBitir() {
 
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
-    toplamTutar += k.TutarTL;
+    toplamTutar += k.ToplamTL;
   });
 
   kayitlar.push({
     Tarih: "",
     Isletme: "GENEL TOPLAM",
+    Tur: "",
     Paket: toplamPaket,
-    BirimTL: "",
-    TutarTL: toplamTutar
+    PaketUcreti: "",
+    ToplamTL: toplamTutar
   });
 
   const ws = XLSX.utils.json_to_sheet(kayitlar);
