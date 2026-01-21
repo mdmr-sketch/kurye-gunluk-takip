@@ -1,83 +1,70 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<title>Kurye Günlük Takip</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<style>
-body { font-family: Arial; padding: 20px; }
-input, button, select { padding: 8px; margin: 6px 0; width: 100%; }
-.toplam { font-weight: bold; margin-top: 10px; }
-.panel { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Kurye Günlük Takip</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button, select { padding: 8px; margin: 6px 0; width: 100%; }
+    .toplam { font-weight: bold; margin-top: 10px; }
+    .panel { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+  </style>
 </head>
 <body>
 
 <h2>Kurye Günlük Takip</h2>
 
 <div class="panel">
-<b>Kayıt Türü</b>
-<select id="tur">
-<option value="teslimat">Teslimat</option>
-<option value="tahsilat">Devir Teslim Alınan</option>
-</select>
+  <b>Kayıt Türü</b>
+  <select id="tur">
+    <option value="normal">Normal Teslimat</option>
+    <option value="devreden">Devreden Ödeme</option>
+  </select>
 </div>
 
 <input id="isletme" placeholder="İşletme Adı">
-<input id="paket" type="number" min="0" placeholder="Paket Sayısı (teslimat)">
-<input id="ucret" type="number" min="0" placeholder="Paket Ücreti / Tahsilat TL">
+
+<input id="paket" type="number" min="0" placeholder="Atılan Paket Sayısı">
+
+<input id="ucret" type="number" min="0" placeholder="Paket Ücreti (TL)">
 
 <button onclick="kaydet()">Kaydet</button>
 <button onclick="gunBitir()">Günü Bitir & Excel</button>
 
 <div class="toplam" id="toplamYazi"></div>
+
 <ul id="liste"></ul>
 
 <script>
 let kayitlar = [];
-let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri") || "{}");
-
-/* 🔁 SAYFA AÇILINCA DEVİRLERİ GÖSTER */
-window.onload = function () {
-  for (const isletme in devirler) {
-    kayitlar.push({
-      Isletme: isletme,
-      Tur: "devreden",
-      Paket: 0,
-      Birim: "",
-      Tutar: devirler[isletme]
-    });
-  }
-  listele();
-};
 
 function kaydet() {
   const isletme = document.getElementById("isletme").value;
   const paket = Number(document.getElementById("paket").value);
   const ucret = Number(document.getElementById("ucret").value);
   const tur = document.getElementById("tur").value;
+
   if (!isletme) return;
 
-  let tutar = 0;
-  let paketSayisi = 0;
+  let toplam = 0;
+  let paketSayisi = paket;
 
-  if (tur === "teslimat") {
-    tutar = paket * ucret;
-    paketSayisi = paket;
-    devirler[isletme] = (devirler[isletme] || 0) + tutar;
-  }
-
-  if (tur === "tahsilat") {
-    tutar = -ucret;
-    devirler[isletme] = (devirler[isletme] || 0) - ucret;
+  if (tur === "normal") {
+    toplam = paket * ucret;
+  } else {
+    // devreden ödeme
+    toplam = ucret;
+    paketSayisi = 0;
   }
 
   kayitlar.push({
+    Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
-    Tur: tur === "teslimat" ? "Teslimat" : "Tahsilat",
+    Tur: tur === "normal" ? "Teslimat" : "Devreden",
     Paket: paketSayisi,
-    Birim: ucret,
-    Tutar: tutar
+    PaketUcreti: tur === "normal" ? ucret : "",
+    ToplamTL: toplam
   });
 
   document.getElementById("isletme").value = "";
@@ -88,30 +75,27 @@ function kaydet() {
 }
 
 function listele() {
-  let toplamPaket = 0;
-  let toplamBakiye = 0;
   const ul = document.getElementById("liste");
   ul.innerHTML = "";
 
-  for (const isletme in devirler) {
-    toplamBakiye += devirler[isletme];
-  }
+  let toplamPaket = 0;
+  let toplamTutar = 0;
 
   kayitlar.forEach(k => {
     toplamPaket += k.Paket;
+    toplamTutar += k.ToplamTL;
+
     const li = document.createElement("li");
     if (k.Tur === "Teslimat") {
-      li.textContent = `${k.Isletme} → ${k.Paket} x ${k.Birim} TL = ${k.Tutar} TL`;
-    } else if (k.Tur === "Tahsilat") {
-      li.textContent = `${k.Isletme} → Tahsilat: ${Math.abs(k.Tutar)} TL`;
+      li.textContent = `${k.Isletme} → ${k.Paket} paket x ${k.PaketUcreti} TL = ${k.ToplamTL} TL`;
     } else {
-      li.textContent = `${k.Isletme} → DEVİR: ${k.Tutar} TL`;
+      li.textContent = `${k.Isletme} → Devreden Ödeme: ${k.ToplamTL} TL`;
     }
     ul.appendChild(li);
   });
 
   document.getElementById("toplamYazi").innerText =
-    `Toplam Paket: ${toplamPaket} | Toplam Kalan Devir: ${toplamBakiye} TL`;
+    `Toplam Paket: ${toplamPaket} | Günlük Toplam Alacak: ${toplamTutar} TL`;
 }
 
 function gunBitir() {
@@ -153,6 +137,16 @@ function gunBitir() {
   kayitlar = [];
   listele();
 }
+
+  const ws = XLSX.utils.json_to_sheet(kayitlar);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Rapor");
+
+  const tarih = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `kurye_rapor_${tarih}.xlsx`);
+
+  kayitlar = [];
+  listele();
 }
 </script>
 
