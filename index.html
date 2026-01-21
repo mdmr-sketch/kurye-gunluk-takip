@@ -1,150 +1,117 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Kurye Günlük Takip</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input, button, select { padding: 8px; margin: 6px 0; width: 100%; }
-    .toplam { font-weight: bold; margin-top: 10px; }
-    .panel { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-  </style>
+<meta charset="UTF-8">
+<title>Kurye Günlük Takip</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+body { font-family: Arial; padding: 10px; }
+input, button { margin: 4px 0; width: 100%; padding: 6px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+</style>
 </head>
+
 <body>
 
-<h2>Kurye Günlük Takip</h2>
+<h3>📦 Kurye Günlük Takip</h3>
 
-<div class="panel">
-  <b>Kayıt Türü</b>
-  <select id="tur">
-    <option value="normal">Normal Teslimat</option>
-    <option value="devreden">Devreden Ödeme</option>
-  </select>
-</div>
+<input id="isletme" placeholder="İşletme adı">
+<input id="paket" type="number" placeholder="Atılan paket sayısı">
+<input id="ucret" type="number" placeholder="Paket ücreti (TL)">
+<input id="tahsilat" type="number" placeholder="Tahsil edilen (opsiyonel)">
+<button onclick="ekle()">Kaydet</button>
 
-<input id="isletme" placeholder="İşletme Adı">
+<h4>📋 Günlük Liste</h4>
+<table>
+<thead>
+<tr>
+<th>İşletme</th>
+<th>Paket</th>
+<th>Birim</th>
+<th>Tutar</th>
+<th>Tahsilat</th>
+</tr>
+</thead>
+<tbody id="liste"></tbody>
+</table>
 
-<input id="paket" type="number" min="0" placeholder="Atılan Paket Sayısı">
+<h4>📊 Gün Sonu</h4>
+<p>Toplam Paket: <span id="toplamPaket">0</span></p>
+<p>Toplam Alacak: <span id="toplamTL">0</span> TL</p>
 
-<input id="ucret" type="number" min="0" placeholder="Paket Ücreti (TL)">
-
-<button onclick="kaydet()">Kaydet</button>
-<button onclick="gunBitir()">Günü Bitir & Excel</button>
-
-<div class="toplam" id="toplamYazi"></div>
-
-<ul id="liste"></ul>
+<button onclick="gunBitir()">📥 Günü Bitir & Excel</button>
 
 <script>
 let kayitlar = [];
+let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
 
-function kaydet() {
+function ekle() {
   const isletme = document.getElementById("isletme").value;
   const paket = Number(document.getElementById("paket").value);
   const ucret = Number(document.getElementById("ucret").value);
-  const tur = document.getElementById("tur").value;
+  const tahsilat = Number(document.getElementById("tahsilat").value || 0);
 
-  if (!isletme) return;
+  if (!isletme || paket <= 0 || ucret <= 0) return alert("Bilgiler eksik");
 
-  let toplam = 0;
-  let paketSayisi = paket;
+  const tutar = paket * ucret;
 
-  if (tur === "normal") {
-    toplam = paket * ucret;
-  } else {
-    // devreden ödeme
-    toplam = ucret;
-    paketSayisi = 0;
-  }
+  if (!devirler[isletme]) devirler[isletme] = 0;
+  devirler[isletme] += tutar - tahsilat;
 
   kayitlar.push({
-    Tarih: new Date().toISOString().slice(0,10),
     Isletme: isletme,
-    Tur: tur === "normal" ? "Teslimat" : "Devreden",
-    Paket: paketSayisi,
-    PaketUcreti: tur === "normal" ? ucret : "",
-    ToplamTL: toplam
+    Paket: paket,
+    Birim: ucret,
+    Tutar: tutar,
+    Tahsilat: tahsilat
   });
-
-  document.getElementById("isletme").value = "";
-  document.getElementById("paket").value = "";
-  document.getElementById("ucret").value = "";
 
   listele();
 }
 
 function listele() {
-  const ul = document.getElementById("liste");
-  ul.innerHTML = "";
+  const tbody = document.getElementById("liste");
+  tbody.innerHTML = "";
 
-  let toplamPaket = 0;
-  let toplamTutar = 0;
+  let toplamP = 0, toplamT = 0;
 
   kayitlar.forEach(k => {
-    toplamPaket += k.Paket;
-    toplamTutar += k.ToplamTL;
+    toplamP += k.Paket;
+    toplamT += k.Tutar;
 
-    const li = document.createElement("li");
-    if (k.Tur === "Teslimat") {
-      li.textContent = `${k.Isletme} → ${k.Paket} paket x ${k.PaketUcreti} TL = ${k.ToplamTL} TL`;
-    } else {
-      li.textContent = `${k.Isletme} → Devreden Ödeme: ${k.ToplamTL} TL`;
-    }
-    ul.appendChild(li);
+    tbody.innerHTML += `
+      <tr>
+        <td>${k.Isletme}</td>
+        <td>${k.Paket}</td>
+        <td>${k.Birim}</td>
+        <td>${k.Tutar}</td>
+        <td>${k.Tahsilat}</td>
+      </tr>`;
   });
 
-  document.getElementById("toplamYazi").innerText =
-    `Toplam Paket: ${toplamPaket} | Günlük Toplam Alacak: ${toplamTutar} TL`;
+  document.getElementById("toplamPaket").innerText = toplamP;
+  document.getElementById("toplamTL").innerText = toplamT;
 }
 
 function gunBitir() {
-
-  /* 1️⃣ GÜNLÜK KAYITLAR */
-  const gunlukSheet = kayitlar.map(k => ({
-    Isletme: k.Isletme,
-    IslemTuru: k.Tur,
-    PaketSayisi: k.Paket,
-    BirimUcret: k.Birim,
-    TutarTL: k.Tutar
-  }));
-
-  /* 2️⃣ DEVİR DURUMU */
-  const devirSheet = [];
-  for (const isletme in devirler) {
-    devirSheet.push({
-      Isletme: isletme,
-      KalanDevirTL: devirler[isletme]
-    });
-  }
-
-  /* EXCEL OLUŞTUR */
   const wb = XLSX.utils.book_new();
 
-  const ws1 = XLSX.utils.json_to_sheet(gunlukSheet);
+  const ws1 = XLSX.utils.json_to_sheet(kayitlar);
   XLSX.utils.book_append_sheet(wb, ws1, "Gunluk_Kayitlar");
+
+  const devirSheet = [];
+  for (let i in devirler) {
+    devirSheet.push({ Isletme: i, KalanDevirTL: devirler[i] });
+  }
 
   const ws2 = XLSX.utils.json_to_sheet(devirSheet);
   XLSX.utils.book_append_sheet(wb, ws2, "Devirler");
 
-  /* KAYDET */
-  localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
-
-  const tarih = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `gunluk_kurye_${tarih}.xlsx`);
-
-  /* GÜN SIFIRLA */
-  kayitlar = [];
-  listele();
-}
-
-  const ws = XLSX.utils.json_to_sheet(kayitlar);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Rapor");
-
   const tarih = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `kurye_rapor_${tarih}.xlsx`);
+  XLSX.writeFile(wb, `kurye_${tarih}.xlsx`);
 
+  localStorage.setItem("isletmeDevirleri", JSON.stringify(devirler));
   kayitlar = [];
   listele();
 }
