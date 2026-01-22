@@ -104,7 +104,10 @@ function ekle(){
   if(p>0&&u>0){etki=p*u-t;islem="Teslimat"}
   else if(t>0){etki=-t;islem="Devir Tahsilatı"}
   else return alert("Eksik bilgi");
-  kayitlar.push({Tarih:bugun(),Isletme:i,Islem:islem,Tutar:p*u||"",Tahsilat:t,Etki:etki});
+  kayitlar.push({
+    Tarih:bugun(),Isletme:i,Islem:islem,
+    Paket:p||"",Tutar:p*u||"",Tahsilat:t,Etki:etki
+  });
   devirler[i]+=etki;
   kaydet();
 }
@@ -117,8 +120,8 @@ function duzelt(){
 
   const p=+duzPaket.value||0,u=+duzUcret.value||0,t=+duzTahsilat.value||0;
   let etki=0,islem="";
-  if(p>0&&u>0){etki=p*u-t;islem="Teslimat";k.Tutar=p*u}
-  else if(t>0){etki=-t;islem="Devir Tahsilatı";k.Tutar=""}
+  if(p>0&&u>0){etki=p*u-t;islem="Teslimat";k.Tutar=p*u;k.Paket=p}
+  else if(t>0){etki=-t;islem="Devir Tahsilatı";k.Tutar="";k.Paket=""}
   else return alert("Eksik bilgi");
 
   k.Islem=islem;k.Tahsilat=t;k.Etki=etki;
@@ -191,12 +194,42 @@ function devirIsletmeSil(){
 
 function excel(){
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kayitlar),"Gunluk Kayitlar");
+
+  // Günlük kayıtlar
   XLSX.utils.book_append_sheet(
     wb,
-    XLSX.utils.json_to_sheet(Object.keys(devirler).map(i=>({Isletme:i,Kalan:devirler[i]}))),
+    XLSX.utils.json_to_sheet(kayitlar),
+    "Gunluk Kayitlar"
+  );
+
+  // Güncel Durum (detaylı)
+  let durum={};
+  kayitlar.forEach(k=>{
+    if(!durum[k.Isletme]){
+      durum[k.Isletme]={Isletme:k.Isletme,Paket:0,Odeme:0};
+    }
+    if(k.Islem==="Teslimat"){
+      durum[k.Isletme].Paket+=+k.Paket||0;
+      durum[k.Isletme].Odeme+=+k.Tahsilat||0;
+    }
+    if(k.Islem==="Devir Tahsilatı"){
+      durum[k.Isletme].Odeme+=+k.Tahsilat||0;
+    }
+  });
+
+  const durumListe=Object.keys(devirler).map(i=>({
+    Isletme:i,
+    "Atılan Paket":durum[i]?.Paket||0,
+    "Alınan Ödeme":durum[i]?.Odeme||0,
+    "Kalan Bakiye":devirler[i]
+  }));
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(durumListe),
     "Güncel Durum"
   );
+
   XLSX.writeFile(wb,"Kurye_Takip.xlsx");
 }
 </script>
