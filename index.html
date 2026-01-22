@@ -8,26 +8,105 @@
 
 <style>
 body{
-  background:#1e293b;color:#f1f5f9;font-family:sans-serif;
-  padding:10px;margin:0
+  background:#0f172a;
+  color:#f1f5f9;
+  font-family:sans-serif;
+  margin:0;
+  padding:15px;
 }
-.container{max-width:900px;margin:auto}
-h2{margin-top:25px;font-size:17px;color:#38bdf8;border-bottom:1px solid #334155;padding-bottom:5px}
+
+.container{
+  max-width:900px;
+  margin:auto;
+}
+
+h2{
+  font-size:17px;
+  color:#38bdf8;
+  border-bottom:1px solid #334155;
+  padding-bottom:5px;
+  margin-top:20px;
+}
+
+.section{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:20px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.5);
+}
+
 input,select,button{
-  width:100%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #334155;font-size:14px
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border-radius:6px;
+  border:none;
+  font-size:14px;
 }
-input,select{background:#334155;color:#f1f5f9}
-button{background:#3b82f6;color:#fff;font-weight:bold}
-button.warn{background:#facc15;color:#000}
-button.danger{background:#ef4444;color:#fff}
-.section{background:#0f172a;padding:10px;border-radius:8px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-th,td{border:1px solid #334155;padding:6px;text-align:center}
-th{background:#1e293b;color:#7dd3fc}
-.status{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
+
+input,select{
+  background:#334155;
+  color:#f1f5f9;
+}
+
+button{
+  background:#3b82f6;
+  color:#fff;
+  font-weight:bold;
+  transition:0.2s;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#2563eb;
+}
+
+button.warn{
+  background:#facc15;
+  color:#000;
+}
+
+button.danger{
+  background:#ef4444;
+  color:#fff;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:13px;
+}
+
+th,td{
+  border-bottom:1px solid #334155;
+  padding:8px;
+  text-align:center;
+}
+
+th{
+  background:#1e293b;
+  color:#7dd3fc;
+}
+
+.status{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:5px;
+}
+
 .red{background:#ef4444}
 .green{background:#22c55e}
-.isletmeCell{display:flex;align-items:center;justify-content:center;gap:6px}
+
+.isletmeCell{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
 </style>
 </head>
 
