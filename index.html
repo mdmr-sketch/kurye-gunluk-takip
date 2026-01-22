@@ -6,10 +6,7 @@
 <title>Kurye Günlük Takip</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
-body{
-  background:#121212;color:#fff;
-  font-family:Arial;padding:10px
-}
+body{background:#121212;color:#fff;font-family:Arial;padding:10px}
 input,select,button{
   width:100%;padding:10px;margin:6px 0;
   border-radius:6px;border:none;font-size:16px
@@ -51,13 +48,6 @@ h2{margin-top:20px}
 <tbody id="devirListe"></tbody>
 </table>
 
-<h2>🧹 Silme / Excel</h2>
-
-<select id="silIsletme"></select>
-<button class="danger" onclick="gunlukSil()">Seçili İşletmenin Günlük Kayıtlarını Sil</button>
-
-<button class="danger" onclick="devirleriSil()">TÜM Devreden Borçları Sil</button>
-
 <button onclick="excel()">📥 Günlük Excel İndir</button>
 
 <script>
@@ -76,27 +66,46 @@ function ekle(){
 
   if(!devirler[i]) devirler[i]=0;
 
-  let islem="", tutar=0, etki=0;
+  const tarih = bugun();
+
+  // 🔍 aynı gün aynı işletme teslimat satırı var mı?
+  let gunlukSatir = kayitlar.find(k =>
+    k.Tarih===tarih &&
+    k.Isletme===i &&
+    k.Islem==="Teslimat"
+  );
 
   if(p>0 && u>0){
-    islem="Teslimat";
-    tutar=p*u;
-    etki=tutar - t;
+    // TESLİMAT
+    const tutar = p*u;
+    const tah = t||0;
+    const etki = tutar - tah;
+
+    kayitlar.push({
+      Tarih:tarih,
+      Isletme:i,
+      Islem:"Teslimat",
+      Tutar:tutar,
+      Tahsilat:tah||"",
+      Etki:etki
+    });
+
+    devirler[i]+=etki;
+
   } else if(t>0){
-    islem="Tahsilat";
-    etki=-t;
-  } else return alert("Bilgi eksik");
-
-  devirler[i]+=etki;
-
-  kayitlar.push({
-    Tarih:bugun(),
-    Isletme:i,
-    Islem:islem,
-    Tutar:tutar||"",
-    Tahsilat:t||"",
-    Etki:etki
-  });
+    // TAHSİLAT
+    if(gunlukSatir){
+      // 👉 aynı satırdan düş
+      gunlukSatir.Tahsilat = (gunlukSatir.Tahsilat||0) + t;
+      gunlukSatir.Etki -= t;
+      devirler[i]-=t;
+    } else {
+      // 👉 sadece devirden düş (satır ekleme)
+      devirler[i]-=t;
+    }
+  } else {
+    return alert("Bilgi eksik");
+  }
 
   localStorage.setItem("gunlukKayitlar",JSON.stringify(kayitlar));
   localStorage.setItem("isletmeDevirleri",JSON.stringify(devirler));
@@ -129,34 +138,12 @@ function yenile(){
     if(devirler[i]!=0)
       devirListe.innerHTML+=`<tr><td>${i}</td><td>${devirler[i]} TL</td></tr>`;
   });
-
-  silIsletme.innerHTML="<option value=''>İşletme seç</option>";
-  [...new Set(kayitlar.map(k=>k.Isletme))].forEach(i=>{
-    silIsletme.innerHTML+=`<option>${i}</option>`;
-  });
-}
-
-function gunlukSil(){
-  const i=silIsletme.value;
-  if(!i) return;
-  if(!confirm(i+" günlük kayıtları silinsin mi?"))return;
-  kayitlar=kayitlar.filter(k=>k.Isletme!=i);
-  localStorage.setItem("gunlukKayitlar",JSON.stringify(kayitlar));
-  yenile();
-}
-
-function devirleriSil(){
-  if(!confirm("TÜM devreden borçlar silinsin mi?"))return;
-  devirler={};
-  localStorage.setItem("isletmeDevirleri",JSON.stringify(devirler));
-  yenile();
 }
 
 function excel(){
   const ws=XLSX.utils.json_to_sheet(kayitlar.map(k=>({
     Tarih:k.Tarih,
     Isletme:k.Isletme,
-    Islem:k.Islem,
     Tutar:k.Tutar,
     Tahsilat:k.Tahsilat,
     KalanBakiye:""
