@@ -4,235 +4,255 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye Takip</title>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body{
-  background:#0f172a;color:#e5e7eb;font-family:Arial;
-  padding:10px;max-width:600px;margin:auto
+  background:#111;
+  color:#eee;
+  font-family:Arial;
+  margin:0;
+  padding:12px
 }
-.section{margin-bottom:18px}
-h2{color:#38bdf8;font-size:17px;margin:6px 0}
+.container{max-width:900px;margin:auto}
+h2{margin-top:25px;border-bottom:1px solid #333;padding-bottom:5px}
 input,select,button{
-  width:100%;padding:11px;margin:5px 0;
-  border-radius:6px;border:1px solid #334155;
-  background:#020617;color:#e5e7eb;font-size:14px
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border-radius:6px;
+  border:none;
+  font-size:15px
 }
-button{background:#2563eb;border:none;font-weight:bold}
-button.danger{background:#dc2626}
-button.warn{background:#ca8a04}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
-th,td{border:1px solid #334155;padding:6px;text-align:center}
-th{color:#7dd3fc}
-.bakiye{font-weight:bold}
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
-.red{background:#ef4444}
-.green{background:#22c55e}
-.isletmeCell{display:flex;align-items:center;justify-content:center;gap:6px}
+input,select{background:#222;color:#fff}
+button{background:#1e88e5;color:#fff}
+button.danger{background:#c62828}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:14px
+}
+th,td{
+  border-bottom:1px solid #333;
+  padding:6px;
+  text-align:center
+}
+th{background:#1a1a1a}
+.status{
+  display:inline-block;
+  width:8px;height:8px;
+  border-radius:50%;
+}
+.red{background:#e53935}
+.green{background:#43a047}
 </style>
 </head>
 
 <body onload="yenile()">
+<div class="container">
 
-<div class="section">
 <h2>📦 Günlük İşlem</h2>
+
 <input id="isletme" placeholder="İşletme adı">
 <input id="paket" type="number" placeholder="Paket sayısı">
 <input id="ucret" type="number" placeholder="Paket ücreti">
 <input id="tahsilat" type="number" placeholder="Tahsil edilen">
-<button onclick="ekle()">Kaydet</button>
-</div>
 
-<div class="section">
-<h2>✏️ Günlük Kayıt Düzelt</h2>
-<select id="duzenleIndex"></select>
-<input id="duzPaket" type="number" placeholder="Yeni paket sayısı">
-<input id="duzUcret" type="number" placeholder="Yeni paket ücreti">
-<input id="duzTahsilat" type="number" placeholder="Yeni tahsilat">
-<button class="warn" onclick="duzelt()">Seçili Günlüğü Güncelle</button>
-</div>
+<button onclick="ekle()">➕ Kaydet</button>
 
-<div class="section">
-<h2>🔁 Devir Düzelt</h2>
-<select id="duzenleDevir"></select>
-<input id="yeniDevir" type="number" placeholder="Yeni devir tutarı">
-<button class="warn" onclick="devirDuzelt()">Devri Güncelle</button>
-</div>
-
-<div class="section">
 <h2>📋 Günlük Kayıtlar</h2>
-<select id="silGunlukIsletme"></select>
-<button class="danger" onclick="gunlukIsletmeSil()">Seçili İşletmenin Günlüklerini Sil</button>
+
+<select id="silGunluk"></select>
+<button class="danger" onclick="gunlukSil()">Seçili İşletmenin Günlük Kayıtlarını Sil</button>
 
 <table>
 <thead>
 <tr>
-<th>Tarih</th><th>İşletme</th><th>İşlem</th>
-<th>Tutar</th><th>Tahsilat</th><th>Kalan</th>
+<th>Tarih</th>
+<th>İşletme</th>
+<th>İşlem</th>
+<th>Tutar</th>
+<th>Tahsilat</th>
+<th>Bakiye</th>
 </tr>
 </thead>
 <tbody id="liste"></tbody>
 </table>
-</div>
 
-<div class="section">
-<h2>📌 Güncel Durum</h2>
-<select id="silDevirIsletme"></select>
-<button class="danger" onclick="devirIsletmeSil()">Seçili Devri Sil</button>
+<h2>🔁 Güncel Devir Durumu</h2>
+
+<select id="silDevir"></select>
+<button class="danger" onclick="devirSil()">Seçili Deviri Sil</button>
 
 <table>
-<thead><tr><th>İşletme</th><th>Kalan</th></tr></thead>
+<thead>
+<tr>
+<th>İşletme</th>
+<th>Bakiye</th>
+<th></th>
+</tr>
+</thead>
 <tbody id="devirListe"></tbody>
 </table>
-</div>
 
-<div class="section">
 <button onclick="excel()">📥 Excel İndir</button>
+
 </div>
 
 <script>
-let kayitlar=JSON.parse(localStorage.getItem("gunlukKayitlar"))||[];
-let devirler=JSON.parse(localStorage.getItem("isletmeDevirleri"))||{};
-const bugun=()=>new Date().toISOString().slice(0,10);
-const n=x=>x.trim().toUpperCase();
+let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
+let devirler = JSON.parse(localStorage.getItem("devirler")) || {};
+
+const bugun = ()=>new Date().toISOString().slice(0,10);
+const N = x=>x.trim().toUpperCase();
 
 function ekle(){
-  const i=n(isletme.value),p=+paket.value||0,u=+ucret.value||0,t=+tahsilat.value||0;
-  if(!i)return alert("İşletme gir");
-  if(!devirler[i])devirler[i]=0;
-  let etki=0,islem="";
-  if(p>0&&u>0){etki=p*u-t;islem="Teslimat"}
-  else if(t>0){etki=-t;islem="Devir Tahsilatı"}
-  else return alert("Eksik bilgi");
-  kayitlar.push({
-    Tarih:bugun(),Isletme:i,Islem:islem,
-    Paket:p||"",Tutar:p*u||"",Tahsilat:t,Etki:etki
-  });
-  devirler[i]+=etki;
-  kaydet();
-}
+  const i=N(isletme.value);
+  const p=+paket.value||0;
+  const u=+ucret.value||0;
+  const t=+tahsilat.value||0;
+  if(!i) return alert("İşletme gir");
 
-function duzelt(){
-  const idx=duzenleIndex.value;
-  if(idx==="")return alert("Kayıt seç");
-  const k=kayitlar[idx];
-  devirler[k.Isletme]-=k.Etki;
+  if(!devirler[i]) devirler[i]=0;
 
-  const p=+duzPaket.value||0,u=+duzUcret.value||0,t=+duzTahsilat.value||0;
-  let etki=0,islem="";
-  if(p>0&&u>0){etki=p*u-t;islem="Teslimat";k.Tutar=p*u;k.Paket=p}
-  else if(t>0){etki=-t;islem="Devir Tahsilatı";k.Tutar="";k.Paket=""}
-  else return alert("Eksik bilgi");
+  const tarih=bugun();
 
-  k.Islem=islem;k.Tahsilat=t;k.Etki=etki;
-  devirler[k.Isletme]+=etki;
-  kaydet();
-}
+  let satir = kayitlar.find(k =>
+    k.Tarih===tarih &&
+    k.Isletme===i &&
+    k.Islem==="Teslimat"
+  );
 
-function devirDuzelt(){
-  const i=duzenleDevir.value;
-  if(!i)return alert("İşletme seç");
-  devirler[i]=+yeniDevir.value||0;
+  if(p>0 && u>0){
+    const tutar=p*u;
+    const tah=t||0;
+    const etki=tutar-tah;
+
+    kayitlar.push({
+      Tarih:tarih,
+      Isletme:i,
+      Islem:"Teslimat",
+      Paket:p,
+      Tutar:tutar,
+      Tahsilat:tah,
+      Etki:etki
+    });
+    devirler[i]+=etki;
+
+  } else if(t>0){
+    if(satir){
+      satir.Tahsilat+=t;
+      satir.Etki-=t;
+    }
+    devirler[i]-=t;
+  } else {
+    return alert("Bilgi eksik");
+  }
+
   kaydet();
 }
 
 function kaydet(){
   localStorage.setItem("gunlukKayitlar",JSON.stringify(kayitlar));
-  localStorage.setItem("isletmeDevirleri",JSON.stringify(devirler));
+  localStorage.setItem("devirler",JSON.stringify(devirler));
   paket.value=ucret.value=tahsilat.value="";
-  duzPaket.value=duzUcret.value=duzTahsilat.value="";
-  yeniDevir.value="";
   yenile();
 }
 
 function yenile(){
-  liste.innerHTML="";duzenleIndex.innerHTML="<option value=''>Kayıt seç</option>";
-  duzenleDevir.innerHTML="<option value=''>İşletme seç</option>";
-  let b={};
-  kayitlar.forEach((k,i)=>{
-    if(!b[k.Isletme])b[k.Isletme]=0;
-    b[k.Isletme]+=k.Etki;
-    const d=b[k.Isletme]>0?"red":"green";
+  liste.innerHTML="";
+  let bakiye={};
+
+  kayitlar.forEach(k=>{
+    if(!bakiye[k.Isletme]) bakiye[k.Isletme]=0;
+    bakiye[k.Isletme]+=k.Etki;
+
     liste.innerHTML+=`
     <tr>
       <td>${k.Tarih}</td>
-      <td><div class="isletmeCell"><span class="dot ${d}"></span>${k.Isletme}</div></td>
+      <td>${k.Isletme}</td>
       <td>${k.Islem}</td>
       <td>${k.Tutar||"-"}</td>
       <td>${k.Tahsilat||"-"}</td>
-      <td class="bakiye">${b[k.Isletme]} TL</td>
+      <td>${bakiye[k.Isletme]} TL</td>
     </tr>`;
-    duzenleIndex.innerHTML+=`<option value="${i}">${k.Tarih} - ${k.Isletme}</option>`;
   });
 
-  silGunlukIsletme.innerHTML="<option>İşletme seç</option>";
-  [...new Set(kayitlar.map(k=>k.Isletme))].forEach(i=>silGunlukIsletme.innerHTML+=`<option>${i}</option>`);
-
-  devirListe.innerHTML="";silDevirIsletme.innerHTML="<option>İşletme seç</option>";
+  devirListe.innerHTML="";
   Object.keys(devirler).forEach(i=>{
-    const d=devirler[i]>0?"red":"green";
+    const d=devirler[i];
+    const renk=d>0?"red":"green";
     devirListe.innerHTML+=`
-    <tr><td><div class="isletmeCell"><span class="dot ${d}"></span>${i}</div></td><td>${devirler[i]} TL</td></tr>`;
-    silDevirIsletme.innerHTML+=`<option>${i}</option>`;
-    duzenleDevir.innerHTML+=`<option>${i}</option>`;
+    <tr>
+      <td>${i}</td>
+      <td>${d} TL</td>
+      <td><span class="status ${renk}"></span></td>
+    </tr>`;
+  });
+
+  doldur();
+}
+
+function doldur(){
+  silGunluk.innerHTML="<option>Günlük işletme seç</option>";
+  [...new Set(kayitlar.map(k=>k.Isletme))].forEach(i=>{
+    silGunluk.innerHTML+=`<option>${i}</option>`;
+  });
+
+  silDevir.innerHTML="<option>Devir seç</option>";
+  Object.keys(devirler).forEach(i=>{
+    silDevir.innerHTML+=`<option>${i}</option>`;
   });
 }
 
-function gunlukIsletmeSil(){
-  const i=silGunlukIsletme.value;
-  if(!confirm(i+" günlükleri silinsin mi?"))return;
+function gunlukSil(){
+  const i=silGunluk.value;
+  if(!i) return;
+  if(!confirm(i+" günlük kayıtları silinsin mi?")) return;
   kayitlar=kayitlar.filter(k=>k.Isletme!==i);
   kaydet();
 }
 
-function devirIsletmeSil(){
-  const i=silDevirIsletme.value;
-  if(!confirm(i+" devri silinsin mi?"))return;
+function devirSil(){
+  const i=silDevir.value;
+  if(!i) return;
+  if(!confirm(i+" devri silinsin mi?")) return;
   delete devirler[i];
   kaydet();
 }
 
 function excel(){
   const wb=XLSX.utils.book_new();
+  let bakiye={};
 
-  // Günlük kayıtlar
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(kayitlar),
-    "Gunluk Kayitlar"
-  );
-
-  // Güncel Durum (detaylı)
-  let durum={};
-  kayitlar.forEach(k=>{
-    if(!durum[k.Isletme]){
-      durum[k.Isletme]={Isletme:k.Isletme,Paket:0,Odeme:0};
-    }
-    if(k.Islem==="Teslimat"){
-      durum[k.Isletme].Paket+=+k.Paket||0;
-      durum[k.Isletme].Odeme+=+k.Tahsilat||0;
-    }
-    if(k.Islem==="Devir Tahsilatı"){
-      durum[k.Isletme].Odeme+=+k.Tahsilat||0;
+  const gunluk=kayitlar.map(k=>{
+    if(!bakiye[k.Isletme]) bakiye[k.Isletme]=0;
+    bakiye[k.Isletme]+=k.Etki;
+    return{
+      Tarih:k.Tarih,
+      Isletme:k.Isletme,
+      Islem:k.Islem,
+      Paket:k.Paket||"",
+      Tutar:k.Tutar||"",
+      Tahsilat:k.Tahsilat||"",
+      Etki:k.Etki,
+      "Kalan Bakiye":bakiye[k.Isletme]
     }
   });
 
-  const durumListe=Object.keys(devirler).map(i=>({
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(gunluk),"Gunluk");
+
+  const durum=Object.keys(devirler).map(i=>({
     Isletme:i,
-    "Atılan Paket":durum[i]?.Paket||0,
-    "Alınan Ödeme":durum[i]?.Odeme||0,
     "Kalan Bakiye":devirler[i]
   }));
 
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.json_to_sheet(durumListe),
-    "Güncel Durum"
-  );
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(durum),"Güncel Durum");
 
   XLSX.writeFile(wb,"Kurye_Takip.xlsx");
 }
 </script>
-
 </body>
 </html>
