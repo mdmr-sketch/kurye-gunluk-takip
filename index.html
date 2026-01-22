@@ -11,23 +11,29 @@ body{
   background:#0f172a;
   color:#e5e7eb;
   font-family:Arial;
-  padding:10px
+  padding:12px;
+  max-width:600px;
+  margin:auto
 }
 .card{
   background:#020617;
-  border-radius:10px;
-  padding:12px;
-  margin-bottom:15px;
-  box-shadow:0 0 10px rgba(0,0,0,.4)
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:16px;
+  box-shadow:0 8px 20px rgba(0,0,0,.35)
 }
-h2{margin:5px 0;color:#38bdf8}
+h2{
+  margin:0 0 10px 0;
+  color:#38bdf8;
+  font-size:18px
+}
 input,select,button{
   width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:6px;
+  padding:12px;
+  margin:6px 0;
+  border-radius:8px;
   border:none;
-  font-size:16px
+  font-size:15px
 }
 button{
   background:#2563eb;
@@ -38,7 +44,7 @@ button.danger{background:#dc2626}
 table{
   width:100%;
   border-collapse:collapse;
-  font-size:14px
+  font-size:13px
 }
 th{
   background:#1e293b;
@@ -46,12 +52,27 @@ th{
 }
 td,th{
   border:1px solid #334155;
-  padding:6px;
+  padding:7px;
   text-align:center
 }
 .bakiye{
-  color:#22c55e;
-  font-weight:bold
+  font-weight:bold;
+  color:#22c55e
+}
+.dot{
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  margin-right:6px
+}
+.red{background:#ef4444}
+.green{background:#22c55e}
+.isletmeCell{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px
 }
 </style>
 </head>
@@ -69,6 +90,10 @@ td,th{
 
 <div class="card">
 <h2>📋 Günlük Kayıtlar</h2>
+
+<select id="silGunlukIsletme"></select>
+<button class="danger" onclick="gunlukIsletmeSil()">Seçili İşletmenin Günlük Kayıtlarını Sil</button>
+
 <table>
 <thead>
 <tr>
@@ -122,15 +147,14 @@ function ekle(){
 
   if(p>0 && u>0){
     const tutar = p*u;
-    const tah = t||0;
-    const etki = tutar - tah;
+    const etki = tutar - t;
 
     kayitlar.push({
       Tarih:tarih,
       Isletme:i,
       Islem:"Teslimat",
       Tutar:tutar,
-      Tahsilat:tah,
+      Tahsilat:t,
       Etki:etki
     });
     devirler[i]+=etki;
@@ -141,7 +165,6 @@ function ekle(){
       gunlukSatir.Etki -= t;
       devirler[i]-=t;
     } else {
-      // 🔴 DEVİR TAHSİLATI KAYDI
       kayitlar.push({
         Tarih:tarih,
         Isletme:i,
@@ -156,6 +179,10 @@ function ekle(){
     return alert("Bilgi eksik");
   }
 
+  kaydet();
+}
+
+function kaydet(){
   localStorage.setItem("gunlukKayitlar",JSON.stringify(kayitlar));
   localStorage.setItem("isletmeDevirleri",JSON.stringify(devirler));
   paket.value=ucret.value=tahsilat.value="";
@@ -170,10 +197,16 @@ function yenile(){
     if(!bakiyeZ[k.Isletme]) bakiyeZ[k.Isletme]=0;
     bakiyeZ[k.Isletme]+=k.Etki;
 
+    const nokta = k.Etki===0 ? "green" : (bakiyeZ[k.Isletme]>0 ? "red" : "green");
+
     liste.innerHTML+=`
     <tr>
       <td>${k.Tarih}</td>
-      <td>${k.Isletme}</td>
+      <td>
+        <div class="isletmeCell">
+          <span class="dot ${nokta}"></span>${k.Isletme}
+        </div>
+      </td>
       <td>${k.Islem}</td>
       <td>${k.Tutar||"-"}</td>
       <td>${k.Tahsilat||"-"}</td>
@@ -181,14 +214,34 @@ function yenile(){
     </tr>`;
   });
 
-  devirListe.innerHTML="";
-  silDevirIsletme.innerHTML="<option>İşletme seç</option>";
-  Object.keys(devirler).forEach(i=>{
-    if(devirler[i]!=0){
-      devirListe.innerHTML+=`<tr><td>${i}</td><td>${devirler[i]} TL</td></tr>`;
-      silDevirIsletme.innerHTML+=`<option>${i}</option>`;
-    }
+  silGunlukIsletme.innerHTML="<option value=''>Günlük işletme seç</option>";
+  [...new Set(kayitlar.map(k=>k.Isletme))].forEach(i=>{
+    silGunlukIsletme.innerHTML+=`<option>${i}</option>`;
   });
+
+  devirListe.innerHTML="";
+  silDevirIsletme.innerHTML="<option value=''>Devir işletme seç</option>";
+  Object.keys(devirler).forEach(i=>{
+    const nokta = devirler[i]>0 ? "red" : "green";
+    devirListe.innerHTML+=`
+    <tr>
+      <td>
+        <div class="isletmeCell">
+          <span class="dot ${nokta}"></span>${i}
+        </div>
+      </td>
+      <td>${devirler[i]} TL</td>
+    </tr>`;
+    silDevirIsletme.innerHTML+=`<option>${i}</option>`;
+  });
+}
+
+function gunlukIsletmeSil(){
+  const i = silGunlukIsletme.value;
+  if(!i) return;
+  if(!confirm(i+" günlük kayıtları silinsin mi?")) return;
+  kayitlar = kayitlar.filter(k=>k.Isletme!==i);
+  kaydet();
 }
 
 function devirIsletmeSil(){
@@ -201,14 +254,7 @@ function devirIsletmeSil(){
 }
 
 function excel(){
-  const ws=XLSX.utils.json_to_sheet(kayitlar.map(k=>({
-    Tarih:k.Tarih,
-    Isletme:k.Isletme,
-    Islem:k.Islem,
-    Tutar:k.Tutar,
-    Tahsilat:k.Tahsilat,
-    KalanBakiye:""
-  })));
+  const ws=XLSX.utils.json_to_sheet(kayitlar);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Gunluk");
   XLSX.writeFile(wb,"Kurye_Gunluk.xlsx");
