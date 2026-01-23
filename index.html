@@ -16,105 +16,26 @@ body{
   display:flex;
   justify-content:center;
 }
-
-.container{
-  width:100%;
-  max-width:900px;
-}
-
-h2{
-  font-size:17px;
-  color:#38bdf8;
-  border-bottom:1px solid #334155;
-  padding-bottom:5px;
-  margin-top:20px;
-}
-
-/* Sectionları sadeleştirdik */
-.section{
-  padding:10px 0;
-  margin-bottom:15px;
-  border-bottom:1px solid #334155;
-}
-
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:6px;
-  border:none;
-  font-size:14px;
-}
-
-input,select{
-  background:#334155;
-  color:#f1f5f9;
-}
-
-button{
-  background:#3b82f6;
-  color:#fff;
-  font-weight:bold;
-  transition:0.2s;
-  cursor:pointer;
-}
-
-button:hover{
-  background:#2563eb;
-}
-
-button.warn{
-  background:#facc15;
-  color:#000;
-}
-
-button.danger{
-  background:#ef4444;
-  color:#fff;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-  font-size:13px;
-}
-
-th,td{
-  border-bottom:1px solid #334155;
-  padding:8px;
-  text-align:center;
-}
-
-th{
-  background:#0f172a;
-  color:#7dd3fc;
-}
-
-.status{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  display:inline-block;
-  margin-right:5px;
-}
-
-.red{background:#ef4444}
-.green{background:#22c55e}
-
-.isletmeCell{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-}
+.container{width:100%;max-width:900px;}
+h2{font-size:17px;color:#38bdf8;border-bottom:1px solid #334155;padding-bottom:5px;margin-top:20px;}
+.section{padding:10px 0;margin-bottom:15px;border-bottom:1px solid #334155;}
+input,select,button{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:none;font-size:14px;}
+input,select{background:#334155;color:#f1f5f9;}
+button{background:#3b82f6;color:#fff;font-weight:bold;cursor:pointer;}
+button.warn{background:#facc15;color:#000;}
+button.danger{background:#ef4444;}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;}
+th,td{border-bottom:1px solid #334155;padding:8px;text-align:center;}
+th{background:#0f172a;color:#7dd3fc;}
+.status{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.red{background:#ef4444}.green{background:#22c55e}
+.isletmeCell{display:flex;align-items:center;justify-content:center;gap:6px;}
 </style>
 </head>
 
 <body onload="yenile()">
 <div class="container">
 
-<!-- Günlük İşlem -->
 <div class="section">
 <h2>📦 Günlük İşlem</h2>
 <input id="isletme" placeholder="İşletme adı">
@@ -124,58 +45,34 @@ th{
 <button onclick="ekle()">Kaydet</button>
 </div>
 
-<!-- Günlük Kayıt Düzelt -->
-<div class="section">
-<h2>✏️ Günlük Kayıt Düzelt</h2>
-<select id="duzenleIndex"></select>
-<input id="duzPaket" type="number" placeholder="Yeni paket sayısı">
-<input id="duzUcret" type="number" placeholder="Yeni paket ücreti">
-<input id="duzTahsilat" type="number" placeholder="Yeni tahsilat">
-<button class="warn" onclick="duzelt()">Seçili Günlüğü Güncelle</button>
-</div>
-
-<!-- Devir Düzelt -->
-<div class="section">
-<h2>🔁 Devir Düzelt</h2>
-<select id="duzenleDevir"></select>
-<input id="yeniDevir" type="number" placeholder="Yeni devir tutarı">
-<button class="warn" onclick="devirDuzelt()">Devri Güncelle</button>
-</div>
-
-<!-- Günlük Kayıtlar -->
 <div class="section">
 <h2>📋 Günlük Kayıtlar</h2>
-<select id="silGunlukIsletme"></select>
-<button class="danger" onclick="gunlukIsletmeSil()">Seçili İşletmenin Günlüklerini Sil</button>
 <table>
 <thead>
 <tr>
-<th>Tarih</th><th>İşletme</th><th>İşlem</th><th>Paket</th><th>Tutar</th><th>Tahsilat</th><th>Kalan Bakiye</th>
+<th>Tarih</th><th>İşletme</th><th>İşlem</th><th>Paket</th><th>Tutar</th><th>Tahsilat</th><th>Kalan</th>
 </tr>
 </thead>
 <tbody id="liste"></tbody>
 </table>
 </div>
 
-<!-- Güncel Durum -->
 <div class="section">
-<h2>📌 Güncel Durum</h2>
-<select id="silDevirIsletme"></select>
-<button class="danger" onclick="devirIsletmeSil()">Seçili Devri Sil</button>
+<h2>📌 Güncel Durum (Devreden)</h2>
 <table>
-<thead><tr><th>İşletme</th><th>Kalan Bakiye</th><th></th></tr></thead>
+<thead><tr><th>İşletme</th><th>Kalan Bakiye</th></tr></thead>
 <tbody id="devirListe"></tbody>
 </table>
 </div>
 
 <div class="section">
 <button onclick="excel()">📥 Excel İndir</button>
+<button class="warn" onclick="gunSonuAl()">🧾 Gün Sonu Al (Günlük Excel)</button>
 </div>
 
 <script>
 let kayitlar = JSON.parse(localStorage.getItem("gunlukKayitlar")) || [];
 let devirler = JSON.parse(localStorage.getItem("isletmeDevirleri")) || {};
-
 const bugun=()=>new Date().toISOString().slice(0,10);
 const n=x=>x.trim().toUpperCase();
 
@@ -185,35 +82,10 @@ function ekle(){
   if(!devirler[i]) devirler[i]=0;
   let etki=0,islem="";
   if(p>0&&u>0){etki=p*u-t;islem="Teslimat"}
-  else if(t>0){etki=-t;islem="Devir Tahsilatı"}
+  else if(t>0){etki=-t;islem="Tahsilat"}
   else return alert("Eksik bilgi");
-
   kayitlar.push({Tarih:bugun(),Isletme:i,Islem:islem,Paket:p||"",Tutar:p*u||"",Tahsilat:t,Etki:etki});
   devirler[i]+=etki;
-  kaydet();
-}
-
-function duzelt(){
-  const idx=duzenleIndex.value;
-  if(idx==="") return alert("Kayıt seç");
-  const k=kayitlar[idx];
-  devirler[k.Isletme]-=k.Etki;
-
-  const p=+duzPaket.value||0,u=+duzUcret.value||0,t=+duzTahsilat.value||0;
-  let etki=0,islem="";
-  if(p>0&&u>0){etki=p*u-t;islem="Teslimat";k.Tutar=p*u;k.Paket=p}
-  else if(t>0){etki=-t;islem="Devir Tahsilatı";k.Tutar="";k.Paket=""}
-  else return alert("Eksik bilgi");
-
-  k.Islem=islem;k.Tahsilat=t;k.Etki=etki;
-  devirler[k.Isletme]+=etki;
-  kaydet();
-}
-
-function devirDuzelt(){
-  const i=duzenleDevir.value;
-  if(!i) return alert("İşletme seç");
-  devirler[i]=+yeniDevir.value||0;
   kaydet();
 }
 
@@ -221,90 +93,53 @@ function kaydet(){
   localStorage.setItem("gunlukKayitlar",JSON.stringify(kayitlar));
   localStorage.setItem("isletmeDevirleri",JSON.stringify(devirler));
   paket.value=ucret.value=tahsilat.value="";
-  duzPaket.value=duzUcret.value=duzTahsilat.value="";
-  yeniDevir.value="";
   yenile();
 }
 
 function yenile(){
-  liste.innerHTML="";duzenleIndex.innerHTML="<option value=''>Kayıt seç</option>";
-  duzenleDevir.innerHTML="<option value=''>İşletme seç</option>";
-  let bakiye={};
-  kayitlar.forEach((k,i)=>{
+  liste.innerHTML="";let bakiye={};
+  kayitlar.forEach(k=>{
     if(!bakiye[k.Isletme]) bakiye[k.Isletme]=0;
     bakiye[k.Isletme]+=k.Etki;
-    const renk=bakiye[k.Isletme]>0?"red":"green";
     liste.innerHTML+=`
     <tr>
       <td>${k.Tarih}</td>
-      <td><div class="isletmeCell"><span class="status ${renk}"></span>${k.Isletme}</div></td>
+      <td>${k.Isletme}</td>
       <td>${k.Islem}</td>
       <td>${k.Paket||"-"}</td>
       <td>${k.Tutar||"-"}</td>
       <td>${k.Tahsilat||"-"}</td>
-      <td>${bakiye[k.Isletme]} TL</td>
+      <td>${bakiye[k.Isletme]}</td>
     </tr>`;
-    duzenleIndex.innerHTML+=`<option value="${i}">${k.Tarih} - ${k.Isletme}</option>`;
   });
-
-  devirListe.innerHTML="";silDevirIsletme.innerHTML="<option>İşletme seç</option>";
+  devirListe.innerHTML="";
   Object.keys(devirler).forEach(i=>{
-    const renk=devirler[i]>0?"red":"green";
-    devirListe.innerHTML+=`
-    <tr><td>${i}</td><td>${devirler[i]} TL</td><td><span class="status ${renk}"></span></td></tr>`;
-    silDevirIsletme.innerHTML+=`<option>${i}</option>`;
-    duzenleDevir.innerHTML+=`<option>${i}</option>`;
+    devirListe.innerHTML+=`<tr><td>${i}</td><td>${devirler[i]} TL</td></tr>`;
   });
-
-  silGunlukIsletme.innerHTML="<option>İşletme seç</option>";
-  [...new Set(kayitlar.map(k=>k.Isletme))].forEach(i=>silGunlukIsletme.innerHTML+=`<option>${i}</option>`);
-}
-
-function gunlukIsletmeSil(){
-  const i=silGunlukIsletme.value;
-  if(!i) return;
-  if(!confirm(i+" günlük kayıtları silinsin mi?")) return;
-  kayitlar=kayitlar.filter(k=>k.Isletme!==i);
-  kaydet();
-}
-
-function devirIsletmeSil(){
-  const i=silDevirIsletme.value;
-  if(!i) return;
-  if(!confirm(i+" devri silinsin mi?")) return;
-  delete devirler[i];
-  kaydet();
 }
 
 function excel(){
   const wb=XLSX.utils.book_new();
-  let bakiye={};
-
-  const gunluk=kayitlar.map(k=>{
-    if(!bakiye[k.Isletme]) bakiye[k.Isletme]=0;
-    bakiye[k.Isletme]+=k.Etki;
-    return {
-      Tarih:k.Tarih,
-      Isletme:k.Isletme,
-      Islem:k.Islem,
-      Paket:k.Paket||"",
-      Tutar:k.Tutar||"",
-      Tahsilat:k.Tahsilat||"",
-      Etki:k.Etki,
-      "Kalan Bakiye":bakiye[k.Isletme]
-    }
-  });
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(gunluk),"Gunluk Kayitlar");
-
-  const durum=Object.keys(devirler).map(i=>({
-    Isletme:i,
-    "Atılan Paket": kayitlar.filter(k=>k.Isletme===i && k.Islem==="Teslimat").reduce((a,b)=>a+(b.Paket||0),0),
-    "Alınan Ödeme": kayitlar.filter(k=>k.Isletme===i).reduce((a,b)=>a+(b.Tahsilat||0),0),
-    "Kalan Bakiye": devirler[i]
-  }));
-
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(durum),"Güncel Durum");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kayitlar),"Gunluk");
   XLSX.writeFile(wb,"Kurye_Takip.xlsx");
+}
+
+function gunSonuAl(){
+  if(!confirm("Gün sonu alınacak.\nGünlük Excel oluşturulacak.\nDevam edilsin mi?")) return;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kayitlar),"Gunluk");
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(
+      Object.keys(devirler).map(i=>({Isletme:i,Bakiye:devirler[i]}))
+    ),
+    "Devreden"
+  );
+  XLSX.writeFile(wb,`Kurye_Takip_${bugun()}.xlsx`);
+  kayitlar=[];
+  localStorage.setItem("gunlukKayitlar","[]");
+  yenile();
+  alert("Gün sonu alındı. Ertesi güne hazır.");
 }
 </script>
 </div>
