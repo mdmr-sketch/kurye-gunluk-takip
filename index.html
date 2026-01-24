@@ -4,203 +4,147 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body{
-  margin:0;
-  font-family:sans-serif;
-  background:#0f172a;
-  color:#f1f5f9;
+  background:#0f172a;color:#f1f5f9;font-family:sans-serif;margin:0;padding:12px
 }
-.container{padding:12px}
-.tabs{
-  display:flex;
-  gap:5px;
-  margin-bottom:10px;
-}
-.tab{
-  flex:1;
-  padding:10px;
-  text-align:center;
-  background:#334155;
-  border-radius:6px;
-  cursor:pointer;
-}
-.tab.active{background:#3b82f6;font-weight:bold}
-
-.section{margin-bottom:15px;border-bottom:1px solid #334155;padding-bottom:10px}
+h2{font-size:16px;color:#38bdf8;margin:10px 0}
+.tabs{display:flex;gap:5px}
+.tabs button{flex:1}
+.section{border-top:1px solid #334155;margin-top:10px;padding-top:10px}
 input,button{
-  width:100%;
-  padding:10px;
-  margin:4px 0;
-  border:none;
-  border-radius:6px;
-  font-size:14px;
+  width:100%;padding:10px;margin:4px 0;border:none;border-radius:6px;
+  background:#334155;color:#f1f5f9;font-size:14px
 }
-input{background:#334155;color:#f1f5f9}
-button{background:#3b82f6;color:#fff;font-weight:bold}
+button{background:#3b82f6;font-weight:bold}
 button.warn{background:#facc15;color:#000}
 button.danger{background:#ef4444}
-
-.list-item{
-  background:#1e293b;
-  padding:8px;
-  border-radius:6px;
-  margin-bottom:6px;
-}
-.row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-size:14px;
-}
-.icon{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  margin-right:6px;
-}
+table{width:100%;font-size:13px;border-collapse:collapse;margin-top:5px}
+th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
+.status{width:10px;height:10px;border-radius:50%;display:inline-block}
 .red{background:#ef4444}
 .green{background:#22c55e}
 .blue{background:#3b82f6}
-
-.actions{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  margin-top:6px;
-}
-.actions button{
-  font-size:12px;
-  padding:6px;
-}
+.actions button{margin:2px 0}
 .hidden{display:none}
 </style>
 </head>
 
-<body onload="render()">
+<body>
 
-<div class="container">
-
-<!-- SEKME -->
 <div class="tabs">
-  <div class="tab active" onclick="sekme('kurye')">🧑‍✈️ Kurye</div>
-  <div class="tab" onclick="sekme('isletme')">🏪 İşletme</div>
+  <button onclick="sekme('kurye')">🚴 Kurye</button>
+  <button onclick="sekme('isletme')">🏪 İşletme</button>
 </div>
 
 <!-- KURYE -->
-<div id="kurye" class="section">
-  <input id="k_ad" placeholder="Kurye adı">
-  <input id="k_paket" type="number" placeholder="Paket sayısı">
-  <input id="k_ucret" type="number" placeholder="Paket ücreti">
+<div id="kurye">
+  <h2>Kurye Girişi</h2>
+  <input id="kAd" placeholder="Kurye Adı">
+  <input id="kPaket" type="number" placeholder="Paket Sayısı">
+  <input id="kUcret" type="number" placeholder="Paket Ücreti">
   <button onclick="kuryeEkle()">Ekle</button>
-  <div id="kuryeListe"></div>
+
+  <table>
+    <thead>
+      <tr><th>Durum</th><th>Kurye</th><th>Paket x Ücret</th><th>Tutar</th><th>İşlem</th></tr>
+    </thead>
+    <tbody id="kuryeListe"></tbody>
+  </table>
 </div>
 
-<!-- ISLETME -->
-<div id="isletme" class="section hidden">
-  <input id="i_ad" placeholder="İşletme adı">
-  <input id="i_paket" type="number" placeholder="Paket sayısı">
-  <input id="i_ucret" type="number" placeholder="Paket ücreti">
+<!-- İŞLETME -->
+<div id="isletme" class="hidden">
+  <h2>İşletme Girişi</h2>
+  <input id="iAd" placeholder="İşletme Adı">
+  <input id="iPaket" type="number" placeholder="Paket Sayısı">
+  <input id="iUcret" type="number" placeholder="Paket Ücreti">
   <button onclick="isletmeEkle()">Ekle</button>
-  <div id="isletmeListe"></div>
+
+  <table>
+    <thead>
+      <tr><th>Durum</th><th>İşletme</th><th>Paket x Ücret</th><th>Tutar</th><th>İşlem</th></tr>
+    </thead>
+    <tbody id="isletmeListe"></tbody>
+  </table>
 </div>
 
-<button class="warn" onclick="gunSonu()">⏱ Gün Sonu Alındı</button>
-
+<div class="section">
+  <button class="warn" onclick="gunSonu()">📤 Gün Sonu & Excel</button>
 </div>
 
 <script>
-let kuryeler = JSON.parse(localStorage.getItem("kuryeler")) || [];
-let isletmeler = JSON.parse(localStorage.getItem("isletmeler")) || [];
+let kuryeler=[], isletmeler=[], excelData=[];
 
-function kaydet(){
-  localStorage.setItem("kuryeler",JSON.stringify(kuryeler));
-  localStorage.setItem("isletmeler",JSON.stringify(isletmeler));
-}
-
-function sekme(s){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById("kurye").classList.toggle("hidden",s!=="kurye");
-  document.getElementById("isletme").classList.toggle("hidden",s!=="isletme");
-}
-
-function render(){
-  kuryeRender();
-  isletmeRender();
+function sekme(x){
+  document.getElementById("kurye").classList.toggle("hidden",x!=="kurye");
+  document.getElementById("isletme").classList.toggle("hidden",x!=="isletme");
 }
 
 function kuryeEkle(){
-  let ad=k_ad.value, p=+k_paket.value, u=+k_ucret.value;
-  if(!ad||p<=0||u<=0) return;
-  let t=p*u;
-  let k=kuryeler.find(x=>x.ad===ad);
-  if(k) k.borc+=t; else kuryeler.push({ad,borc:t});
-  k_ad.value=k_paket.value=k_ucret.value="";
-  kaydet(); render();
+  let ad=kAd.value, p=+kPaket.value, u=+kUcret.value;
+  if(!ad||!p||!u)return;
+  kuryeler.push({ad,p,u,top:p*u});
+  listele();
 }
 
 function isletmeEkle(){
-  let ad=i_ad.value, p=+i_paket.value, u=+i_ucret.value;
-  if(!ad||p<=0||u<=0) return;
-  let t=p*u;
-  let i=isletmeler.find(x=>x.ad===ad);
-  if(i) i.borc+=t; else isletmeler.push({ad,borc:t});
-  i_ad.value=i_paket.value=i_ucret.value="";
-  kaydet(); render();
+  let ad=iAd.value, p=+iPaket.value, u=+iUcret.value;
+  if(!ad||!p||!u)return;
+  isletmeler.push({ad,p,u,top:p*u});
+  listele();
 }
 
-function kuryeRender(){
+function listele(){
   kuryeListe.innerHTML="";
-  kuryeler.filter(x=>x.borc!==0).forEach((k,i)=>{
-    let cls=k.borc>0?"blue":"red";
+  kuryeler.forEach((k,i)=>{
     kuryeListe.innerHTML+=`
-    <div class="list-item">
-      <div class="row">
-        <div><span class="icon ${cls}"></span>${k.ad}</div>
-        <b>${k.borc} ₺</b>
-      </div>
-      <div class="actions">
-        <button onclick="duzelt(kuryeler,${i})">Değiştir</button>
-        <button class="danger" onclick="sil(kuryeler,${i})">Sil</button>
-      </div>
-    </div>`;
+    <tr>
+      <td><span class="status blue"></span></td>
+      <td>${k.ad}</td>
+      <td>${k.p} x ${k.u}</td>
+      <td>${k.top}</td>
+      <td class="actions">
+        <button class="danger" onclick="kuryeler.splice(${i},1);listele()">Sil</button>
+      </td>
+    </tr>`;
   });
-}
 
-function isletmeRender(){
   isletmeListe.innerHTML="";
-  isletmeler.filter(x=>x.borc!==0).forEach((i,j)=>{
+  isletmeler.forEach((k,i)=>{
     isletmeListe.innerHTML+=`
-    <div class="list-item">
-      <div class="row">
-        <div><span class="icon red"></span>${i.ad}</div>
-        <b>${i.borc} ₺</b>
-      </div>
-      <div class="actions">
-        <button onclick="duzelt(isletmeler,${j})">Değiştir</button>
-        <button class="danger" onclick="sil(isletmeler,${j})">Sil</button>
-      </div>
-    </div>`;
+    <tr>
+      <td><span class="status red"></span></td>
+      <td>${k.ad}</td>
+      <td>${k.p} x ${k.u}</td>
+      <td>${k.top}</td>
+      <td class="actions">
+        <button class="danger" onclick="isletmeler.splice(${i},1);listele()">Sil</button>
+      </td>
+    </tr>`;
   });
 }
 
-function duzelt(arr,i){
-  let y=prompt("Yeni tutar:",arr[i].borc);
-  if(y===null) return;
-  arr[i].borc=+y;
-  kaydet(); render();
-}
-function sil(arr,i){
-  if(confirm("Silinsin mi?")){
-    arr.splice(i,1);
-    kaydet(); render();
-  }
-}
 function gunSonu(){
-  alert("Gün sonu alındı");
-  render();
+  let tarih=new Date().toLocaleDateString("tr-TR");
+  let sheet=[];
+
+  kuryeler.forEach(k=>{
+    sheet.push({Tarih:tarih,Tip:"Kurye",Ad:k.ad,Paket:k.p,Ucret:k.u,Tutar:k.top});
+  });
+  isletmeler.forEach(i=>{
+    sheet.push({Tarih:tarih,Tip:"İşletme",Ad:i.ad,Paket:i.p,Ucret:i.u,Tutar:i.top});
+  });
+
+  let wb=XLSX.utils.book_new();
+  let ws=XLSX.utils.json_to_sheet(sheet);
+  XLSX.utils.book_append_sheet(wb,ws,tarih);
+  XLSX.writeFile(wb,"kurye_isletme_takip.xlsx");
+
+  kuryeler=[];isletmeler=[];
+  listele();
 }
 </script>
 
