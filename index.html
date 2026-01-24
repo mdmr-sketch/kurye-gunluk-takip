@@ -49,6 +49,7 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 let today = new Date().toLocaleDateString();
 let data = JSON.parse(localStorage.getItem("takip")) || {kurye: [], isletme: []};
 let editIndex = null, editType = null;
+let devirData = {kurye: [], isletme: []};
 
 function save(){localStorage.setItem("takip", JSON.stringify(data)); render();}
 
@@ -101,8 +102,7 @@ function sil(type, i){
   }
 }
 
-let devirData = {kurye: [], isletme: []};
-
+// Gün sonu artık sadece devirData dolduruyor, günlükleri silmiyor
 function gunSonu(){
   devirData = {kurye: [], isletme: []};
   ["kurye","isletme"].forEach(type=>{
@@ -113,7 +113,7 @@ function gunSonu(){
       if(toplam<0) devirData[type].push({ad, tutar:toplam, tip:"Devir Alacak"});
     });
   });
-  save();
+  renderDevir();
 }
 
 function excel(){
