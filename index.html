@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye & İşletme Takip</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<title>Kurye & İşletme Takip – Çekirdek</title>
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
@@ -12,13 +11,16 @@ body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10
 .tabs button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
 .active{background:#3b82f6;color:#fff}
 .passive{background:#334155;color:#fff}
+
 .section{border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:10px}
 input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
-.row{padding:6px 0}
-.entry{display:flex;justify-content:space-between;font-size:13px}
+
+.person{margin-bottom:12px}
+.entry{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
 .small{padding:2px 6px;font-size:11px}
+
 .red{color:#ef4444}
 .green{color:#22c55e}
 .blue{color:#38bdf8}
@@ -35,7 +37,7 @@ button{background:#22c55e;color:#000;font-weight:bold}
 <!-- KURYE -->
 <div id="kurye">
   <div class="section">
-    <h3>Kurye Günlük Dağıtım</h3>
+    <h3>Kurye Dağıtım</h3>
     <input id="k_ad" placeholder="Kurye Adı">
     <input id="k_paket" type="number" placeholder="Paket">
     <input id="k_ucret" type="number" placeholder="Paket Ücreti">
@@ -55,7 +57,7 @@ button{background:#22c55e;color:#000;font-weight:bold}
 <!-- İŞLETME -->
 <div id="isletme" style="display:none">
   <div class="section">
-    <h3>İşletme Günlük Dağıtım</h3>
+    <h3>İşletme Dağıtım</h3>
     <input id="i_ad" placeholder="İşletme Adı">
     <input id="i_paket" type="number" placeholder="Paket">
     <input id="i_ucret" type="number" placeholder="Paket Ücreti">
@@ -73,11 +75,24 @@ button{background:#22c55e;color:#000;font-weight:bold}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("kuryeSistem")) || {
-  kurye:{}, isletme:{}
-};
+/* === KİLİTLİ VERİ MODELİ ===
+data = {
+  kurye: {
+    "Ahmet":[
+      {tip:"dagitim", paket:10, ucret:8, tarih:"2026-01-24"},
+      {tip:"odeme", miktar:50, tarih:"2026-01-24"}
+    ]
+  },
+  isletme:{}
+}
+BU YAPI DEĞİŞMEYECEK
+============================ */
 
-function save(){localStorage.setItem("kuryeSistem",JSON.stringify(data))}
+let data = JSON.parse(localStorage.getItem("cekirdek")) || {kurye:{}, isletme:{}};
+
+function save(){localStorage.setItem("cekirdek",JSON.stringify(data))}
+function today(){return new Date().toISOString().split("T")[0]}
+
 function showTab(t){
  kurye.style.display=t=="kurye"?"block":"none";
  isletme.style.display=t=="isletme"?"block":"none";
@@ -85,41 +100,48 @@ function showTab(t){
  tIsletme.className=t=="isletme"?"active":"passive";
 }
 
-function addEntry(type,name,entry){
+function add(type,name,obj){
  if(!data[type][name]) data[type][name]=[];
- data[type][name].push(entry);
+ data[type][name].push(obj);
  save(); render();
 }
 
+/* KURYE */
 function kuryeDagitim(){
- addEntry("kurye",k_ad.value,{t:"dagitim",p:+k_paket.value,u:+k_ucret.value});
+ add("kurye",k_ad.value,{tip:"dagitim",paket:+k_paket.value,ucret:+k_ucret.value,tarih:today()});
 }
 function kuryeOdeme(){
- addEntry("kurye",k_odeme_ad.value,{t:"odeme",m:+k_odeme.value});
-}
-function isletmeDagitim(){
- addEntry("isletme",i_ad.value,{t:"dagitim",p:+i_paket.value,u:+i_ucret.value});
-}
-function isletmeOdeme(){
- addEntry("isletme",i_odeme_ad.value,{t:"odeme",m:+i_odeme.value});
+ add("kurye",k_odeme_ad.value,{tip:"odeme",miktar:+k_odeme.value,tarih:today()});
 }
 
-function hesap(entries,isKurye){
- return entries.reduce((s,e)=>{
-  if(e.t=="dagitim") return s+(isKurye?-e.p*e.u:e.p*e.u);
-  return s+(isKurye?e.m:-e.m);
+/* İŞLETME */
+function isletmeDagitim(){
+ add("isletme",i_ad.value,{tip:"dagitim",paket:+i_paket.value,ucret:+i_ucret.value,tarih:today()});
+}
+function isletmeOdeme(){
+ add("isletme",i_odeme_ad.value,{tip:"odeme",miktar:+i_odeme.value,tarih:today()});
+}
+
+function hesap(liste,isKurye){
+ return liste.reduce((t,e)=>{
+  if(e.tip=="dagitim") return t+(isKurye?-(e.paket*e.ucret):(e.paket*e.ucret));
+  return t+(isKurye?e.miktar:-e.miktar);
  },0);
 }
 
 function render(){
  kuryeList.innerHTML=""; isletmeList.innerHTML="";
+
  for(let k in data.kurye){
   let b=hesap(data.kurye[k],true);
   let icon=b>0?"🔵":b<0?"🔴":"🟢";
   let cls=b>0?"blue":b<0?"red":"green";
-  kuryeList.innerHTML+=`<div class="row ${cls}"><b>${icon} ${k} (${b}₺)</b>`;
+
+  kuryeList.innerHTML+=`<div class="person ${cls}"><b>${icon} ${k} (${b}₺)</b>`;
   data.kurye[k].forEach((e,i)=>{
-   let txt=e.t=="dagitim"?`${e.p}x${e.u}=${e.p*e.u}`:`Ödeme ${e.m}`;
+   let txt=e.tip=="dagitim"
+     ?`${e.tarih} | ${e.paket}x${e.ucret} = ${e.paket*e.ucret}`
+     :`${e.tarih} | Ödeme ${e.miktar}`;
    kuryeList.innerHTML+=`
     <div class="entry">
      ${txt}
@@ -136,9 +158,12 @@ function render(){
   let b=hesap(data.isletme[i],false);
   let icon=b>0?"🔴":"🟢";
   let cls=b>0?"red":"green";
-  isletmeList.innerHTML+=`<div class="row ${cls}"><b>${icon} ${i} (${b}₺)</b>`;
+
+  isletmeList.innerHTML+=`<div class="person ${cls}"><b>${icon} ${i} (${b}₺)</b>`;
   data.isletme[i].forEach((e,x)=>{
-   let txt=e.t=="dagitim"?`${e.p}x${e.u}=${e.p*e.u}`:`Ödeme ${e.m}`;
+   let txt=e.tip=="dagitim"
+     ?`${e.tarih} | ${e.paket}x${e.ucret} = ${e.paket*e.ucret}`
+     :`${e.tarih} | Ödeme ${e.miktar}`;
    isletmeList.innerHTML+=`
     <div class="entry">
      ${txt}
@@ -156,18 +181,20 @@ function del(t,n,i){
  if(!confirm("Silinsin mi?"))return;
  data[t][n].splice(i,1); save(); render();
 }
+
 function edit(t,n,i){
  let e=data[t][n][i];
- if(e.t=="dagitim"){
-  e.p=+prompt("Paket",e.p);
-  e.u=+prompt("Ücret",e.u);
+ if(e.tip=="dagitim"){
+  e.paket=+prompt("Paket",e.paket);
+  e.ucret=+prompt("Ücret",e.ucret);
  }else{
-  e.m=+prompt("Ödeme",e.m);
+  e.miktar=+prompt("Ödeme",e.miktar);
  }
  save(); render();
 }
 
 function loadData(){render()}
 </script>
+
 </body>
 </html>
