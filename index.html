@@ -82,14 +82,14 @@ small{color:#94a3b8}
 </div>
 
 <script>
-let kurye = JSON.parse(localStorage.getItem("kurye"))||[]
-let isletme = JSON.parse(localStorage.getItem("isletme"))||[]
+let kuryeData = JSON.parse(localStorage.getItem("kurye")) || []
+let isletmeData = JSON.parse(localStorage.getItem("isletme")) || []
 
-function showTab(t){
-kurye.style.display=t=="kurye"?"block":"none"
-isletme.style.display=t=="isletme"?"block":"none"
-kuryeTab.classList.toggle("active",t=="kurye")
-isletmeTab.classList.toggle("active",t=="isletme")
+function showTab(tab){
+document.getElementById("kurye").style.display = tab==="kurye" ? "block" : "none"
+document.getElementById("isletme").style.display = tab==="isletme" ? "block" : "none"
+document.getElementById("kuryeTab").classList.toggle("active",tab==="kurye")
+document.getElementById("isletmeTab").classList.toggle("active",tab==="isletme")
 }
 
 function tarih(){return new Date().toLocaleDateString("tr-TR")}
@@ -98,13 +98,13 @@ function icon(b){return b>0?'<span class="icon blue"></span>':b<0?'<span class="
 /* KURYE */
 function ekleKurye(){
 let p=+k_paket.value||0,u=+k_ucret.value||0,o=+k_odeme.value||0
-kurye.push({t:tarih(),ad:k_ad.value,p,u,tutar:p*u,odeme:o,bakiye:p*u-o})
+kuryeData.push({t:tarih(),ad:k_ad.value,p,u,tutar:p*u,odeme:o,bakiye:p*u-o})
 kaydet()
 }
 
 function kuryeListele(){
 let h="",tp=0,net=0
-kurye.forEach((x,i)=>{
+kuryeData.forEach((x,i)=>{
 tp+=x.p; net+=x.bakiye
 h+=`<tr>
 <td>${icon(x.bakiye)}</td>
@@ -122,13 +122,13 @@ kuryeToplam.innerHTML=`<small>Toplam Paket: ${tp} | Net: ${net}</small>`
 /* İŞLETME */
 function ekleIsletme(){
 let p=+i_paket.value||0,tel=+i_tel.value||0,o=+i_odeme.value||0
-isletme.push({t:tarih(),ad:i_ad.value,p,tel,tutar:p*tel,odeme:o,bakiye:p*tel-o})
+isletmeData.push({t:tarih(),ad:i_ad.value,p,tel,tutar:p*tel,odeme:o,bakiye:p*tel-o})
 kaydet()
 }
 
 function isletmeListele(){
 let h=""
-isletme.forEach((x,i)=>{
+isletmeData.forEach((x,i)=>{
 h+=`<tr>
 <td>${icon(x.bakiye)}</td>
 <td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
@@ -142,11 +142,11 @@ isletmeListe.innerHTML=h
 }
 
 /* DÜZENLE / SİL */
-function silKurye(i){if(confirm("Silinsin mi?")){kurye.splice(i,1);kaydet()}}
-function silIsletme(i){if(confirm("Silinsin mi?")){isletme.splice(i,1);kaydet()}}
+function silKurye(i){if(confirm("Silinsin mi?")){kuryeData.splice(i,1);kaydet()}}
+function silIsletme(i){if(confirm("Silinsin mi?")){isletmeData.splice(i,1);kaydet()}}
 
 function duzenleKurye(i){
-let x=kurye[i]
+let x=kuryeData[i]
 x.p=+prompt("Paket",x.p)
 x.u=+prompt("Ücret",x.u)
 x.odeme=+prompt("Ödeme",x.odeme)
@@ -156,7 +156,7 @@ kaydet()
 }
 
 function duzenleIsletme(i){
-let x=isletme[i]
+let x=isletmeData[i]
 x.p=+prompt("Paket",x.p)
 x.tel=+prompt("Tel",x.tel)
 x.odeme=+prompt("Ödeme",x.odeme)
@@ -170,26 +170,27 @@ function gunSonu(){
 if(!confirm("Gün sonu alınacak. Emin misin?"))return
 
 let wb=XLSX.utils.book_new()
-let wsData=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
-kurye.forEach(x=>wsData.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
-wsData.push([])
-wsData.push(["İŞLETMELER"])
-wsData.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
-isletme.forEach(x=>wsData.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
+let data=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
+kuryeData.forEach(x=>data.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
+data.push([])
+data.push(["İŞLETMELER"])
+data.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
+isletmeData.forEach(x=>data.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
 
-let ws=XLSX.utils.aoa_to_sheet(wsData)
+let ws=XLSX.utils.aoa_to_sheet(data)
 XLSX.utils.book_append_sheet(wb,ws,tarih())
 XLSX.writeFile(wb,"kurye_isletme_takip.xlsx")
 
-kurye=kurye.filter(x=>x.bakiye!=0)
-isletme=isletme.filter(x=>x.bakiye!=0)
+kuryeData = kuryeData.filter(x=>x.bakiye!=0)
+isletmeData = isletmeData.filter(x=>x.bakiye!=0)
 kaydet()
 }
 
 function kaydet(){
-localStorage.setItem("kurye",JSON.stringify(kurye))
-localStorage.setItem("isletme",JSON.stringify(isletme))
-kuryeListele();isletmeListele()
+localStorage.setItem("kurye",JSON.stringify(kuryeData))
+localStorage.setItem("isletme",JSON.stringify(isletmeData))
+kuryeListele()
+isletmeListele()
 }
 
 kaydet()
