@@ -12,15 +12,13 @@ body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10
 .tabs button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
 .active{background:#3b82f6;color:#fff}
 .passive{background:#334155;color:#fff}
-
 .section{border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:10px}
 input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
-
-.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
-.small{padding:4px 6px;font-size:12px}
-
+.row{padding:6px 0}
+.entry{display:flex;justify-content:space-between;font-size:13px}
+.small{padding:2px 6px;font-size:11px}
 .red{color:#ef4444}
 .green{color:#22c55e}
 .blue{color:#38bdf8}
@@ -37,58 +35,49 @@ button{background:#22c55e;color:#000;font-weight:bold}
 <!-- KURYE -->
 <div id="kurye">
   <div class="section">
-    <h3>Kurye Dağıtım Girişi</h3>
+    <h3>Kurye Günlük Dağıtım</h3>
     <input id="k_ad" placeholder="Kurye Adı">
     <input id="k_paket" type="number" placeholder="Paket">
     <input id="k_ucret" type="number" placeholder="Paket Ücreti">
-    <button onclick="kuryeEkle()">Ekle</button>
+    <button onclick="kuryeDagitim()">Ekle</button>
   </div>
 
   <div class="section">
-    <h3>Kurye Ödemesi</h3>
+    <h3>Kurye Ödeme</h3>
     <input id="k_odeme_ad" placeholder="Kurye Adı">
     <input id="k_odeme" type="number" placeholder="Ödeme">
     <button onclick="kuryeOdeme()">Ödeme Gir</button>
   </div>
 
-  <h3>Kurye Listesi</h3>
   <div id="kuryeList"></div>
-
-  <h3>📦 Günlük Kurye Dağıtımı: <span id="kuryeGunluk">0</span> ₺</h3>
 </div>
 
 <!-- İŞLETME -->
 <div id="isletme" style="display:none">
   <div class="section">
-    <h3>İşletme Dağıtım Girişi</h3>
+    <h3>İşletme Günlük Dağıtım</h3>
     <input id="i_ad" placeholder="İşletme Adı">
     <input id="i_paket" type="number" placeholder="Paket">
     <input id="i_ucret" type="number" placeholder="Paket Ücreti">
-    <button onclick="isletmeEkle()">Ekle</button>
+    <button onclick="isletmeDagitim()">Ekle</button>
   </div>
 
   <div class="section">
-    <h3>İşletme Ödemesi</h3>
+    <h3>İşletme Ödeme</h3>
     <input id="i_odeme_ad" placeholder="İşletme Adı">
     <input id="i_odeme" type="number" placeholder="Ödeme">
     <button onclick="isletmeOdeme()">Ödeme Al</button>
   </div>
 
-  <h3>İşletme Listesi</h3>
   <div id="isletmeList"></div>
-
-  <h3>📦 Günlük İşletme Dağıtımı: <span id="isletmeGunluk">0</span> ₺</h3>
 </div>
-
-<button onclick="gunSonu()">📊 Gün Sonu & Excel</button>
 
 <script>
 let data = JSON.parse(localStorage.getItem("kuryeSistem")) || {
-  kurye:[], isletme:[]
+  kurye:{}, isletme:{}
 };
 
 function save(){localStorage.setItem("kuryeSistem",JSON.stringify(data))}
-
 function showTab(t){
  kurye.style.display=t=="kurye"?"block":"none";
  isletme.style.display=t=="isletme"?"block":"none";
@@ -96,81 +85,89 @@ function showTab(t){
  tIsletme.className=t=="isletme"?"active":"passive";
 }
 
-function kuryeEkle(){
- let ad=k_ad.value, p=+k_paket.value, u=+k_ucret.value;
- let t=p*u;
- data.kurye.push({ad,borc:-t,gunluk:t});
+function addEntry(type,name,entry){
+ if(!data[type][name]) data[type][name]=[];
+ data[type][name].push(entry);
  save(); render();
 }
 
+function kuryeDagitim(){
+ addEntry("kurye",k_ad.value,{t:"dagitim",p:+k_paket.value,u:+k_ucret.value});
+}
 function kuryeOdeme(){
- let k=data.kurye.find(x=>x.ad==k_odeme_ad.value);
- if(!k) return;
- k.borc+=+k_odeme.value;
- save(); render();
+ addEntry("kurye",k_odeme_ad.value,{t:"odeme",m:+k_odeme.value});
 }
-
-function isletmeEkle(){
- let ad=i_ad.value, p=+i_paket.value, u=+i_ucret.value;
- let t=p*u;
- data.isletme.push({ad,borc:t,gunluk:t});
- save(); render();
+function isletmeDagitim(){
+ addEntry("isletme",i_ad.value,{t:"dagitim",p:+i_paket.value,u:+i_ucret.value});
 }
-
 function isletmeOdeme(){
- let i=data.isletme.find(x=>x.ad==i_odeme_ad.value);
- if(!i) return;
- i.borc-=+i_odeme.value;
- save(); render();
+ addEntry("isletme",i_odeme_ad.value,{t:"odeme",m:+i_odeme.value});
+}
+
+function hesap(entries,isKurye){
+ return entries.reduce((s,e)=>{
+  if(e.t=="dagitim") return s+(isKurye?-e.p*e.u:e.p*e.u);
+  return s+(isKurye?e.m:-e.m);
+ },0);
 }
 
 function render(){
  kuryeList.innerHTML=""; isletmeList.innerHTML="";
- let kGun=0,iGun=0;
+ for(let k in data.kurye){
+  let b=hesap(data.kurye[k],true);
+  let icon=b>0?"🔵":b<0?"🔴":"🟢";
+  let cls=b>0?"blue":b<0?"red":"green";
+  kuryeList.innerHTML+=`<div class="row ${cls}"><b>${icon} ${k} (${b}₺)</b>`;
+  data.kurye[k].forEach((e,i)=>{
+   let txt=e.t=="dagitim"?`${e.p}x${e.u}=${e.p*e.u}`:`Ödeme ${e.m}`;
+   kuryeList.innerHTML+=`
+    <div class="entry">
+     ${txt}
+     <span>
+      <button class="small" onclick="edit('kurye','${k}',${i})">✏️</button>
+      <button class="small" onclick="del('kurye','${k}',${i})">🗑</button>
+     </span>
+    </div>`;
+  });
+  kuryeList.innerHTML+="</div>";
+ }
 
- data.kurye.forEach((k,i)=>{
-  let icon=k.borc>0?"🔵":k.borc<0?"🔴":"🟢";
-  let cls=k.borc>0?"blue":k.borc<0?"red":"green";
-  kGun+=k.gunluk;
-  kuryeList.innerHTML+=`
-   <div class="row ${cls}">
-    ${icon} ${k.ad} : ${k.borc} ₺
-    <button class="small" onclick="sil('kurye',${i})">🗑</button>
-   </div>`;
- });
-
- data.isletme.forEach((i,x)=>{
-  let icon=i.borc>0?"🔴":"🟢";
-  let cls=i.borc>0?"red":"green";
-  iGun+=i.gunluk;
-  isletmeList.innerHTML+=`
-   <div class="row ${cls}">
-    ${icon} ${i.ad} : ${i.borc} ₺
-    <button class="small" onclick="sil('isletme',${x})">🗑</button>
-   </div>`;
- });
-
- kuryeGunluk.innerText=kGun;
- isletmeGunluk.innerText=iGun;
+ for(let i in data.isletme){
+  let b=hesap(data.isletme[i],false);
+  let icon=b>0?"🔴":"🟢";
+  let cls=b>0?"red":"green";
+  isletmeList.innerHTML+=`<div class="row ${cls}"><b>${icon} ${i} (${b}₺)</b>`;
+  data.isletme[i].forEach((e,x)=>{
+   let txt=e.t=="dagitim"?`${e.p}x${e.u}=${e.p*e.u}`:`Ödeme ${e.m}`;
+   isletmeList.innerHTML+=`
+    <div class="entry">
+     ${txt}
+     <span>
+      <button class="small" onclick="edit('isletme','${i}',${x})">✏️</button>
+      <button class="small" onclick="del('isletme','${i}',${x})">🗑</button>
+     </span>
+    </div>`;
+  });
+  isletmeList.innerHTML+="</div>";
+ }
 }
 
-function sil(t,i){
- if(!confirm("Silmek istiyor musun?"))return;
- data[t].splice(i,1); save(); render();
+function del(t,n,i){
+ if(!confirm("Silinsin mi?"))return;
+ data[t][n].splice(i,1); save(); render();
 }
-
-function gunSonu(){
- let wb=XLSX.utils.book_new();
- let ws=XLSX.utils.json_to_sheet([
-  ...data.kurye.map(k=>({Tip:"Kurye",Ad:k.ad,Borc:k.borc})),
-  ...data.isletme.map(i=>({Tip:"İşletme",Ad:i.ad,Borc:i.borc}))
- ]);
- XLSX.utils.book_append_sheet(wb,ws,new Date().toLocaleDateString());
- XLSX.writeFile(wb,"Gunluk_Takip.xlsx");
+function edit(t,n,i){
+ let e=data[t][n][i];
+ if(e.t=="dagitim"){
+  e.p=+prompt("Paket",e.p);
+  e.u=+prompt("Ücret",e.u);
+ }else{
+  e.m=+prompt("Ödeme",e.m);
+ }
+ save(); render();
 }
 
 function loadData(){render()}
 </script>
-
 </body>
 </html>
