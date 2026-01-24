@@ -8,209 +8,179 @@
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
-.tabs{display:flex;gap:6px}
-.tabs button{flex:1;padding:10px;border:none;border-radius:6px;background:#334155;color:#fff}
-.tabs button.active{background:#3b82f6}
+.tabbar{display:flex;gap:5px}
+.tabbar button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
+.active{background:#2563eb;color:#fff}
+.passive{background:#334155;color:#94a3b8}
 .section{margin-top:15px}
-input,button{width:100%;padding:8px;margin:4px 0;border:none;border-radius:5px}
+input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input{background:#334155;color:#fff}
-button{background:#22c55e;color:#000;font-weight:bold}
-button.warn{background:#facc15}
-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
-th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
-
-/* DURUM İKONLARI */
-.dot{display:inline-block;width:12px;height:12px;border-radius:50%}
+button{background:#3b82f6;color:#fff;font-weight:bold}
+table{width:100%;font-size:12px;margin-top:8px;border-collapse:collapse}
+th,td{padding:6px;border-bottom:1px solid #334155;text-align:center}
+.icon{width:10px;height:10px;border-radius:50%;display:inline-block}
 .red{background:#ef4444}
 .green{background:#22c55e}
 .blue{background:#3b82f6}
-
-/* KÜÇÜK BUTONLAR */
-.btnMini{
-display:inline-flex;
-align-items:center;
-justify-content:center;
-width:26px;
-height:26px;
-border-radius:50%;
-font-size:14px;
-cursor:pointer;
-margin:0 2px;
-}
-.edit{background:#38bdf8;color:#000}
-.del{background:#ef4444;color:#fff}
-
-.footerBtn{margin-top:15px}
-small{color:#94a3b8}
+.actions button{padding:2px 6px;font-size:11px;margin:0 2px}
+.small{background:#475569}
+.danger{background:#ef4444}
+.warn{background:#facc15;color:#000}
+.hidden{display:none}
+.footer{margin-top:20px}
 </style>
 </head>
 
 <body>
 
-<div class="tabs">
-  <button id="kuryeTab" class="active" onclick="showTab('kurye')">Kurye</button>
-  <button id="isletmeTab" onclick="showTab('isletme')">İşletme</button>
+<div class="tabbar">
+  <button id="tKurye" class="active" onclick="tab('kurye')">KURYELER</button>
+  <button id="tIsletme" class="passive" onclick="tab('isletme')">İŞLETMELER</button>
 </div>
 
 <!-- KURYE -->
-<div id="kurye" class="section">
-<h3>Kurye Günlük Kayıt</h3>
-<input id="k_ad" placeholder="Kurye adı">
-<input id="k_paket" type="number" placeholder="Paket sayısı">
-<input id="k_ucret" type="number" placeholder="Paket ücreti">
-<input id="k_odeme" type="number" placeholder="Ödeme (varsa)">
-<button onclick="ekleKurye()">Kaydet</button>
-
-<div id="kuryeToplam"></div>
-
-<table>
-<thead>
-<tr>
-<th></th><th>Tarih</th><th>Kurye</th><th>Paket</th>
-<th>Ücret</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th></th>
-</tr>
-</thead>
-<tbody id="kuryeListe"></tbody>
-</table>
-
-<button class="warn footerBtn" onclick="gunSonu()">GÜN SONU</button>
+<div id="kurye">
+  <div class="section">
+    <input id="kAd" placeholder="Kurye adı">
+    <input id="kPaket" type="number" placeholder="Paket sayısı">
+    <input id="kUcret" type="number" placeholder="Paket ücreti">
+    <button onclick="kuryeEkle()">Kurye Günlük Ekle</button>
+    <input id="kOdeme" type="number" placeholder="Kuryeye ödeme">
+    <button class="warn" onclick="kuryeOdeme()">Ödeme Gir</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Durum</th><th>Kurye</th><th>Paket</th><th>Tutar</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="kuryeListe"></tbody>
+  </table>
 </div>
 
 <!-- İŞLETME -->
-<div id="isletme" class="section" style="display:none">
-<h3>İşletme Günlük Kayıt</h3>
-<input id="i_ad" placeholder="İşletme adı">
-<input id="i_paket" type="number" placeholder="Paket">
-<input id="i_tel" type="number" placeholder="Paket ücreti">
-<input id="i_odeme" type="number" placeholder="Ödeme">
-<button onclick="ekleIsletme()">Kaydet</button>
+<div id="isletme" class="hidden">
+  <div class="section">
+    <input id="iAd" placeholder="İşletme adı">
+    <input id="iPaket" type="number" placeholder="Paket sayısı">
+    <input id="iUcret" type="number" placeholder="Paket ücreti">
+    <button onclick="isletmeEkle()">İşletme Günlük Ekle</button>
+    <input id="iOdeme" type="number" placeholder="Ödeme alındı">
+    <button class="warn" onclick="isletmeOdeme()">Ödeme Gir</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Durum</th><th>İşletme</th><th>Paket</th><th>Tutar</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="isletmeListe"></tbody>
+  </table>
+</div>
 
-<table>
-<thead>
-<tr>
-<th></th><th>Tarih</th><th>İşletme</th><th>Paket</th>
-<th>Tel</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th></th>
-</tr>
-</thead>
-<tbody id="isletmeListe"></tbody>
-</table>
-
-<button class="warn footerBtn" onclick="gunSonu()">GÜN SONU</button>
+<div class="footer">
+  <button class="danger" onclick="gunSonu()">GÜN SONU AL</button>
+  <button onclick="excel()">EXCEL AKTAR</button>
 </div>
 
 <script>
-let kuryeData=JSON.parse(localStorage.getItem("kurye"))||[]
-let isletmeData=JSON.parse(localStorage.getItem("isletme"))||[]
+let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[],isletme:[],gun:new Date().toLocaleDateString()}
 
-function showTab(t){
-document.getElementById("kurye").style.display=t==="kurye"?"block":"none"
-document.getElementById("isletme").style.display=t==="isletme"?"block":"none"
-kuryeTab.classList.toggle("active",t==="kurye")
-isletmeTab.classList.toggle("active",t==="isletme")
+function save(){localStorage.setItem("takip",JSON.stringify(data));yenile()}
+
+function tab(x){
+  kurye.classList.add("hidden")
+  isletme.classList.add("hidden")
+  document.getElementById("tKurye").className="passive"
+  document.getElementById("tIsletme").className="passive"
+  document.getElementById(x).classList.remove("hidden")
+  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).className="active"
 }
 
-function tarih(){return new Date().toLocaleDateString("tr-TR")}
-function durum(b){
-if(b>0)return'<span class="dot blue"></span>'
-if(b<0)return'<span class="dot red"></span>'
-return'<span class="dot green"></span>'
+function icon(t){
+  if(t>0) return "red"
+  if(t<0) return "blue"
+  return "green"
 }
 
-/* KURYE */
-function ekleKurye(){
-let p=+k_paket.value||0,u=+k_ucret.value||0,o=+k_odeme.value||0
-kuryeData.push({t:tarih(),ad:k_ad.value,p,u,tutar:p*u,odeme:o,bakiye:p*u-o})
-kaydet()
+function kuryeEkle(){
+  let ad=kAd.value, p=+kPaket.value, u=+kUcret.value
+  if(!ad||!p||!u)return
+  data.kurye.push({ad,paket:p,tutar:p*u})
+  save()
+}
+function kuryeOdeme(){
+  let t=+kOdeme.value
+  if(!t)return
+  data.kurye.push({ad:"Ödeme",paket:0,tutar:-t})
+  save()
 }
 
-function kuryeListele(){
-let h="",tp=0,net=0
-kuryeData.forEach((x,i)=>{
-tp+=x.p;net+=x.bakiye
-h+=`<tr>
-<td>${durum(x.bakiye)}</td>
-<td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
-<td>${x.u}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
-<td>
-<span class="btnMini edit" onclick="duzenleKurye(${i})">✏️</span>
-<span class="btnMini del" onclick="silKurye(${i})">🗑</span>
-</td></tr>`
-})
-kuryeListe.innerHTML=h
-kuryeToplam.innerHTML=`<small>Toplam Paket: ${tp} | Net: ${net}</small>`
+function isletmeEkle(){
+  let ad=iAd.value, p=+iPaket.value, u=+iUcret.value
+  if(!ad||!p||!u)return
+  data.isletme.push({ad,paket:p,tutar:p*u})
+  save()
+}
+function isletmeOdeme(){
+  let t=+iOdeme.value
+  if(!t)return
+  data.isletme.push({ad:"Ödeme",paket:0,tutar:-t})
+  save()
 }
 
-/* İŞLETME */
-function ekleIsletme(){
-let p=+i_paket.value||0,tel=+i_tel.value||0,o=+i_odeme.value||0
-isletmeData.push({t:tarih(),ad:i_ad.value,p,tel,tutar:p*tel,odeme:o,bakiye:p*tel-o})
-kaydet()
+function yenile(){
+  kuryeListe.innerHTML=""
+  data.kurye.forEach((x,i)=>{
+    kuryeListe.innerHTML+=`
+    <tr>
+      <td><span class="icon ${icon(x.tutar)}"></span></td>
+      <td>${x.ad}</td>
+      <td>${x.paket}</td>
+      <td>${x.tutar}</td>
+      <td class="actions">
+        <button class="small" onclick="sil('kurye',${i})">✖</button>
+      </td>
+    </tr>`
+  })
+  isletmeListe.innerHTML=""
+  data.isletme.forEach((x,i)=>{
+    isletmeListe.innerHTML+=`
+    <tr>
+      <td><span class="icon ${icon(x.tutar)}"></span></td>
+      <td>${x.ad}</td>
+      <td>${x.paket}</td>
+      <td>${x.tutar}</td>
+      <td class="actions">
+        <button class="small" onclick="sil('isletme',${i})">✖</button>
+      </td>
+    </tr>`
+  })
 }
 
-function isletmeListele(){
-let h=""
-isletmeData.forEach((x,i)=>{
-h+=`<tr>
-<td>${durum(x.bakiye)}</td>
-<td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
-<td>${x.tel}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
-<td>
-<span class="btnMini edit" onclick="duzenleIsletme(${i})">✏️</span>
-<span class="btnMini del" onclick="silIsletme(${i})">🗑</span>
-</td></tr>`
-})
-isletmeListe.innerHTML=h
+function sil(t,i){
+  if(confirm("Silmek istiyor musun?")){
+    data[t].splice(i,1);save()
+  }
 }
 
-/* DÜZENLE / SİL */
-function silKurye(i){if(confirm("Silinsin mi?")){kuryeData.splice(i,1);kaydet()}}
-function silIsletme(i){if(confirm("Silinsin mi?")){isletmeData.splice(i,1);kaydet()}}
-
-function duzenleKurye(i){
-let x=kuryeData[i]
-x.p=+prompt("Paket",x.p)
-x.u=+prompt("Ücret",x.u)
-x.odeme=+prompt("Ödeme",x.odeme)
-x.tutar=x.p*x.u
-x.bakiye=x.tutar-x.odeme
-kaydet()
-}
-
-function duzenleIsletme(i){
-let x=isletmeData[i]
-x.p=+prompt("Paket",x.p)
-x.tel=+prompt("Tel",x.tel)
-x.odeme=+prompt("Ödeme",x.odeme)
-x.tutar=x.p*x.tel
-x.bakiye=x.tutar-x.odeme
-kaydet()
-}
-
-/* GÜN SONU */
 function gunSonu(){
-if(!confirm("Gün sonu alınacak. Emin misin?"))return
-let wb=XLSX.utils.book_new()
-let d=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
-kuryeData.forEach(x=>d.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
-d.push([])
-d.push(["İŞLETMELER"])
-d.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
-isletmeData.forEach(x=>d.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
-let ws=XLSX.utils.aoa_to_sheet(d)
-XLSX.utils.book_append_sheet(wb,ws,tarih())
-XLSX.writeFile(wb,"kurye_isletme_takip.xlsx")
-kuryeData=kuryeData.filter(x=>x.bakiye!=0)
-isletmeData=isletmeData.filter(x=>x.bakiye!=0)
-kaydet()
+  data.kurye=data.kurye.filter(x=>x.tutar!=0)
+  data.isletme=data.isletme.filter(x=>x.tutar!=0)
+  save()
 }
 
-function kaydet(){
-localStorage.setItem("kurye",JSON.stringify(kuryeData))
-localStorage.setItem("isletme",JSON.stringify(isletmeData))
-kuryeListele()
-isletmeListele()
+function excel(){
+  let wb=XLSX.utils.book_new()
+  let ws1=XLSX.utils.json_to_sheet(data.kurye)
+  let ws2=XLSX.utils.json_to_sheet(data.isletme)
+  XLSX.utils.book_append_sheet(wb,ws1,"Kurye_"+data.gun)
+  XLSX.utils.book_append_sheet(wb,ws2,"Isletme_"+data.gun)
+  XLSX.writeFile(wb,"Gunluk_Takip.xlsx")
 }
-kaydet()
+
+yenile()
 </script>
+
 </body>
 </html>
