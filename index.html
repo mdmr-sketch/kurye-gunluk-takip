@@ -8,35 +8,38 @@
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
-.tabs{display:flex;gap:5px;margin-bottom:10px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
 .tabs button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
 .active{background:#3b82f6;color:#fff}
 .passive{background:#334155;color:#fff}
+
 .section{border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:10px}
 input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
-.small{width:auto;padding:4px 6px;font-size:12px}
+
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+.small{padding:4px 6px;font-size:12px}
+
 .red{color:#ef4444}
 .green{color:#22c55e}
 .blue{color:#38bdf8}
-.row{display:flex;gap:5px;align-items:center;justify-content:space-between}
 </style>
 </head>
 
 <body onload="loadData()">
 
 <div class="tabs">
-  <button class="active" onclick="showTab('kurye')">Kurye</button>
-  <button class="passive" onclick="showTab('isletme')">İşletme</button>
+  <button id="tKurye" class="active" onclick="showTab('kurye')">Kurye</button>
+  <button id="tIsletme" class="passive" onclick="showTab('isletme')">İşletme</button>
 </div>
 
 <!-- KURYE -->
 <div id="kurye">
   <div class="section">
-    <h3>Kurye Girişi</h3>
+    <h3>Kurye Dağıtım Girişi</h3>
     <input id="k_ad" placeholder="Kurye Adı">
-    <input id="k_paket" type="number" placeholder="Paket Sayısı">
+    <input id="k_paket" type="number" placeholder="Paket">
     <input id="k_ucret" type="number" placeholder="Paket Ücreti">
     <button onclick="kuryeEkle()">Ekle</button>
   </div>
@@ -51,13 +54,13 @@ button{background:#22c55e;color:#000;font-weight:bold}
   <h3>Kurye Listesi</h3>
   <div id="kuryeList"></div>
 
-  <h3>📦 Günlük Dağıtım: <span id="gunlukDagitim">0</span> ₺</h3>
+  <h3>📦 Günlük Kurye Dağıtımı: <span id="kuryeGunluk">0</span> ₺</h3>
 </div>
 
 <!-- İŞLETME -->
 <div id="isletme" style="display:none">
   <div class="section">
-    <h3>İşletme Girişi</h3>
+    <h3>İşletme Dağıtım Girişi</h3>
     <input id="i_ad" placeholder="İşletme Adı">
     <input id="i_paket" type="number" placeholder="Paket">
     <input id="i_ucret" type="number" placeholder="Paket Ücreti">
@@ -65,7 +68,7 @@ button{background:#22c55e;color:#000;font-weight:bold}
   </div>
 
   <div class="section">
-    <h3>Ödeme Al</h3>
+    <h3>İşletme Ödemesi</h3>
     <input id="i_odeme_ad" placeholder="İşletme Adı">
     <input id="i_odeme" type="number" placeholder="Ödeme">
     <button onclick="isletmeOdeme()">Ödeme Al</button>
@@ -73,28 +76,30 @@ button{background:#22c55e;color:#000;font-weight:bold}
 
   <h3>İşletme Listesi</h3>
   <div id="isletmeList"></div>
+
+  <h3>📦 Günlük İşletme Dağıtımı: <span id="isletmeGunluk">0</span> ₺</h3>
 </div>
 
 <button onclick="gunSonu()">📊 Gün Sonu & Excel</button>
 
 <script>
 let data = JSON.parse(localStorage.getItem("kuryeSistem")) || {
-  kurye:[], isletme:[], gunlukExcel:[]
+  kurye:[], isletme:[]
 };
 
 function save(){localStorage.setItem("kuryeSistem",JSON.stringify(data))}
 
 function showTab(t){
- document.getElementById("kurye").style.display=t=="kurye"?"block":"none";
- document.getElementById("isletme").style.display=t=="isletme"?"block":"none";
- document.querySelectorAll(".tabs button").forEach(b=>b.className="passive");
- event.target.className="active";
+ kurye.style.display=t=="kurye"?"block":"none";
+ isletme.style.display=t=="isletme"?"block":"none";
+ tKurye.className=t=="kurye"?"active":"passive";
+ tIsletme.className=t=="isletme"?"active":"passive";
 }
 
 function kuryeEkle(){
  let ad=k_ad.value, p=+k_paket.value, u=+k_ucret.value;
  let t=p*u;
- data.kurye.push({ad,borc:-t});
+ data.kurye.push({ad,borc:-t,gunluk:t});
  save(); render();
 }
 
@@ -108,7 +113,7 @@ function kuryeOdeme(){
 function isletmeEkle(){
  let ad=i_ad.value, p=+i_paket.value, u=+i_ucret.value;
  let t=p*u;
- data.isletme.push({ad,borc:t});
+ data.isletme.push({ad,borc:t,gunluk:t});
  save(); render();
 }
 
@@ -120,30 +125,33 @@ function isletmeOdeme(){
 }
 
 function render(){
- kuryeList.innerHTML="";
- isletmeList.innerHTML="";
- let gunluk=0;
+ kuryeList.innerHTML=""; isletmeList.innerHTML="";
+ let kGun=0,iGun=0;
 
  data.kurye.forEach((k,i)=>{
-  let c=k.borc>0?"blue":k.borc<0?"red":"green";
-  gunluk+=k.borc<0?-k.borc:0;
+  let icon=k.borc>0?"🔵":k.borc<0?"🔴":"🟢";
+  let cls=k.borc>0?"blue":k.borc<0?"red":"green";
+  kGun+=k.gunluk;
   kuryeList.innerHTML+=`
-   <div class="row ${c}">
-    ${k.ad} : ${k.borc} ₺
+   <div class="row ${cls}">
+    ${icon} ${k.ad} : ${k.borc} ₺
     <button class="small" onclick="sil('kurye',${i})">🗑</button>
    </div>`;
  });
 
  data.isletme.forEach((i,x)=>{
-  let c=i.borc>0?"red":"green";
+  let icon=i.borc>0?"🔴":"🟢";
+  let cls=i.borc>0?"red":"green";
+  iGun+=i.gunluk;
   isletmeList.innerHTML+=`
-   <div class="row ${c}">
-    ${i.ad} : ${i.borc} ₺
+   <div class="row ${cls}">
+    ${icon} ${i.ad} : ${i.borc} ₺
     <button class="small" onclick="sil('isletme',${x})">🗑</button>
    </div>`;
  });
 
- gunlukDagitim.innerText=gunluk;
+ kuryeGunluk.innerText=kGun;
+ isletmeGunluk.innerText=iGun;
 }
 
 function sil(t,i){
