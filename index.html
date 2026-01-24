@@ -7,236 +7,161 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body{background:#0f172a;color:#f1f5f9;font-family:sans-serif;margin:0;padding:12px}
-h2{font-size:16px;color:#38bdf8;margin:10px 0}
-.tabs{display:flex;gap:6px}
-.tabs button{flex:1}
-input,button{
-  width:100%;padding:10px;margin:4px 0;border:none;border-radius:6px;
-  background:#334155;color:#f1f5f9
-}
-button{background:#3b82f6;font-weight:bold}
-button.warn{background:#facc15;color:#000}
-button.danger{background:#ef4444}
-button.edit{background:#64748b}
-
-.summary{
-  background:#020617;
-  border:1px solid #334155;
-  padding:10px;
-  border-radius:6px;
-  margin-top:10px;
-  text-align:center;
-  font-weight:bold;
-  color:#facc15
-}
-
-table{width:100%;font-size:13px;border-collapse:collapse;margin-top:6px}
-th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
-
-.status{width:10px;height:10px;border-radius:50%;display:inline-block}
-.red{background:#ef4444}
-.green{background:#22c55e}
-.blue{background:#3b82f6}
-
-.devir{font-size:11px;color:#facc15}
-.hidden{display:none}
-
-.actions button{
-  padding:4px 6px;
-  font-size:12px;
-  margin:0 2px;
-}
+body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
+.tabs{display:flex;gap:5px;margin-bottom:10px}
+.tabs button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
+.active{background:#3b82f6;color:#fff}
+.passive{background:#334155;color:#fff}
+.section{border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:10px}
+input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
+input{background:#334155;color:#fff}
+button{background:#22c55e;color:#000;font-weight:bold}
+.small{width:auto;padding:4px 6px;font-size:12px}
+.red{color:#ef4444}
+.green{color:#22c55e}
+.blue{color:#38bdf8}
+.row{display:flex;gap:5px;align-items:center;justify-content:space-between}
 </style>
 </head>
 
-<body onload="listele()">
+<body onload="loadData()">
 
 <div class="tabs">
-  <button onclick="sekme('kurye')">🚴 Kurye</button>
-  <button onclick="sekme('isletme')">🏪 İşletme</button>
-</div>
-
-<div class="summary" id="gunlukToplam">
-📦 Bugünkü Dağıtım Toplamı: 0 ₺
+  <button class="active" onclick="showTab('kurye')">Kurye</button>
+  <button class="passive" onclick="showTab('isletme')">İşletme</button>
 </div>
 
 <!-- KURYE -->
 <div id="kurye">
-<h2>Kurye Paket Girişi</h2>
-<input id="kAd" placeholder="Kurye Adı">
-<input id="kPaket" type="number" placeholder="Paket Sayısı">
-<input id="kUcret" type="number" placeholder="Paket Ücreti">
-<button onclick="kuryePaket()">Paket Ekle</button>
+  <div class="section">
+    <h3>Kurye Girişi</h3>
+    <input id="k_ad" placeholder="Kurye Adı">
+    <input id="k_paket" type="number" placeholder="Paket Sayısı">
+    <input id="k_ucret" type="number" placeholder="Paket Ücreti">
+    <button onclick="kuryeEkle()">Ekle</button>
+  </div>
 
-<h2>Kurye Ödeme</h2>
-<input id="kOdemeAd" placeholder="Kurye Adı">
-<input id="kOdeme" type="number" placeholder="Ödeme Tutarı">
-<button class="warn" onclick="kuryeOdeme()">Ödeme Yap</button>
+  <div class="section">
+    <h3>Kurye Ödemesi</h3>
+    <input id="k_odeme_ad" placeholder="Kurye Adı">
+    <input id="k_odeme" type="number" placeholder="Ödeme">
+    <button onclick="kuryeOdeme()">Ödeme Gir</button>
+  </div>
 
-<table>
-<thead>
-<tr><th></th><th>Kurye</th><th>Alacak</th><th>Durum</th><th></th></tr>
-</thead>
-<tbody id="kuryeListe"></tbody>
-</table>
+  <h3>Kurye Listesi</h3>
+  <div id="kuryeList"></div>
+
+  <h3>📦 Günlük Dağıtım: <span id="gunlukDagitim">0</span> ₺</h3>
 </div>
 
 <!-- İŞLETME -->
-<div id="isletme" class="hidden">
-<h2>İşletme Paket Girişi</h2>
-<input id="iAd" placeholder="İşletme Adı">
-<input id="iPaket" type="number" placeholder="Paket Sayısı">
-<input id="iUcret" type="number" placeholder="Paket Ücreti">
-<button onclick="isletmePaket()">Paket Ekle</button>
+<div id="isletme" style="display:none">
+  <div class="section">
+    <h3>İşletme Girişi</h3>
+    <input id="i_ad" placeholder="İşletme Adı">
+    <input id="i_paket" type="number" placeholder="Paket">
+    <input id="i_ucret" type="number" placeholder="Paket Ücreti">
+    <button onclick="isletmeEkle()">Ekle</button>
+  </div>
 
-<h2>İşletme Ödeme</h2>
-<input id="iOdemeAd" placeholder="İşletme Adı">
-<input id="iOdeme" type="number" placeholder="Ödeme Tutarı">
-<button class="warn" onclick="isletmeOdeme()">Ödeme Al</button>
+  <div class="section">
+    <h3>Ödeme Al</h3>
+    <input id="i_odeme_ad" placeholder="İşletme Adı">
+    <input id="i_odeme" type="number" placeholder="Ödeme">
+    <button onclick="isletmeOdeme()">Ödeme Al</button>
+  </div>
 
-<table>
-<thead>
-<tr><th></th><th>İşletme</th><th>Borç</th><th>Durum</th><th></th></tr>
-</thead>
-<tbody id="isletmeListe"></tbody>
-</table>
+  <h3>İşletme Listesi</h3>
+  <div id="isletmeList"></div>
 </div>
 
-<button class="warn" onclick="gunSonu()">📤 Gün Sonu & Excel</button>
+<button onclick="gunSonu()">📊 Gün Sonu & Excel</button>
 
 <script>
-let kuryeler=JSON.parse(localStorage.getItem("kuryeler"))||[];
-let isletmeler=JSON.parse(localStorage.getItem("isletmeler"))||[];
-let gunlukToplam=JSON.parse(localStorage.getItem("gunlukToplam"))||0;
+let data = JSON.parse(localStorage.getItem("kuryeSistem")) || {
+  kurye:[], isletme:[], gunlukExcel:[]
+};
 
-function kaydet(){
- localStorage.setItem("kuryeler",JSON.stringify(kuryeler));
- localStorage.setItem("isletmeler",JSON.stringify(isletmeler));
- localStorage.setItem("gunlukToplam",JSON.stringify(gunlukToplam));
+function save(){localStorage.setItem("kuryeSistem",JSON.stringify(data))}
+
+function showTab(t){
+ document.getElementById("kurye").style.display=t=="kurye"?"block":"none";
+ document.getElementById("isletme").style.display=t=="isletme"?"block":"none";
+ document.querySelectorAll(".tabs button").forEach(b=>b.className="passive");
+ event.target.className="active";
 }
 
-function sekme(x){
- kurye.classList.toggle("hidden",x!=="kurye");
- isletme.classList.toggle("hidden",x!=="isletme");
-}
-
-function kuryePaket(){
- let ad=kAd.value,p=+kPaket.value,u=+kUcret.value;
- if(!ad||!p||!u)return;
- let tutar=p*u;
- let k=kuryeler.find(x=>x.ad===ad);
- if(!k){k={ad,alacak:0,devir:false};kuryeler.push(k)}
- k.alacak+=tutar; k.devir=false;
- gunlukToplam+=tutar;
- kaydet();listele();
+function kuryeEkle(){
+ let ad=k_ad.value, p=+k_paket.value, u=+k_ucret.value;
+ let t=p*u;
+ data.kurye.push({ad,borc:-t});
+ save(); render();
 }
 
 function kuryeOdeme(){
- let ad=kOdemeAd.value,t=+kOdeme.value;
- let k=kuryeler.find(x=>x.ad===ad);
- if(!k||!t)return;
- k.alacak-=t; if(k.alacak<0)k.alacak=0;
- kaydet();listele();
+ let k=data.kurye.find(x=>x.ad==k_odeme_ad.value);
+ if(!k) return;
+ k.borc+=+k_odeme.value;
+ save(); render();
 }
 
-function isletmePaket(){
- let ad=iAd.value,p=+iPaket.value,u=+iUcret.value;
- if(!ad||!p||!u)return;
- let tutar=p*u;
- let i=isletmeler.find(x=>x.ad===ad);
- if(!i){i={ad,borc:0,devir:false};isletmeler.push(i)}
- i.borc+=tutar; i.devir=false;
- gunlukToplam+=tutar;
- kaydet();listele();
+function isletmeEkle(){
+ let ad=i_ad.value, p=+i_paket.value, u=+i_ucret.value;
+ let t=p*u;
+ data.isletme.push({ad,borc:t});
+ save(); render();
 }
 
 function isletmeOdeme(){
- let ad=iOdemeAd.value,t=+iOdeme.value;
- let i=isletmeler.find(x=>x.ad===ad);
- if(!i||!t)return;
- i.borc-=t; if(i.borc<0)i.borc=0;
- kaydet();listele();
+ let i=data.isletme.find(x=>x.ad==i_odeme_ad.value);
+ if(!i) return;
+ i.borc-=+i_odeme.value;
+ save(); render();
 }
 
-function silKurye(i){
- if(confirm("Bu kurye kaydını silmek istiyor musun?")){
-  kuryeler.splice(i,1);kaydet();listele();
- }
-}
+function render(){
+ kuryeList.innerHTML="";
+ isletmeList.innerHTML="";
+ let gunluk=0;
 
-function silIsletme(i){
- if(confirm("Bu işletme kaydını silmek istiyor musun?")){
-  isletmeler.splice(i,1);kaydet();listele();
- }
-}
-
-function listele(){
- document.getElementById("gunlukToplam").innerText=
-  "📦 Bugünkü Dağıtım Toplamı: "+gunlukToplam+" ₺";
-
- kuryeListe.innerHTML="";
- kuryeler.forEach((k,i)=>{
-  let renk=k.alacak>0?"blue":"green";
-  kuryeListe.innerHTML+=`
-  <tr>
-   <td><span class="status ${renk}"></span></td>
-   <td>${k.ad}</td>
-   <td>${k.alacak}</td>
-   <td>${k.devir?'<span class="devir">DEVİR</span>':''}</td>
-   <td class="actions">
-    <button class="edit" onclick="duzenleKurye(${i})">✏️</button>
-    <button class="danger" onclick="silKurye(${i})">🗑</button>
-   </td>
-  </tr>`;
+ data.kurye.forEach((k,i)=>{
+  let c=k.borc>0?"blue":k.borc<0?"red":"green";
+  gunluk+=k.borc<0?-k.borc:0;
+  kuryeList.innerHTML+=`
+   <div class="row ${c}">
+    ${k.ad} : ${k.borc} ₺
+    <button class="small" onclick="sil('kurye',${i})">🗑</button>
+   </div>`;
  });
 
- isletmeListe.innerHTML="";
- isletmeler.forEach((i,x)=>{
-  let renk=i.borc>0?"red":"green";
-  isletmeListe.innerHTML+=`
-  <tr>
-   <td><span class="status ${renk}"></span></td>
-   <td>${i.ad}</td>
-   <td>${i.borc}</td>
-   <td>${i.devir?'<span class="devir">DEVİR</span>':''}</td>
-   <td class="actions">
-    <button class="edit" onclick="duzenleIsletme(${x})">✏️</button>
-    <button class="danger" onclick="silIsletme(${x})">🗑</button>
-   </td>
-  </tr>`;
+ data.isletme.forEach((i,x)=>{
+  let c=i.borc>0?"red":"green";
+  isletmeList.innerHTML+=`
+   <div class="row ${c}">
+    ${i.ad} : ${i.borc} ₺
+    <button class="small" onclick="sil('isletme',${x})">🗑</button>
+   </div>`;
  });
+
+ gunlukDagitim.innerText=gunluk;
 }
 
-function duzenleKurye(i){
- let t=prompt("Yeni alacak tutarı:",kuryeler[i].alacak);
- if(t!==null){kuryeler[i].alacak=+t;kaydet();listele();}
-}
-
-function duzenleIsletme(i){
- let t=prompt("Yeni borç tutarı:",isletmeler[i].borc);
- if(t!==null){isletmeler[i].borc=+t;kaydet();listele();}
+function sil(t,i){
+ if(!confirm("Silmek istiyor musun?"))return;
+ data[t].splice(i,1); save(); render();
 }
 
 function gunSonu(){
- let tarih=new Date().toLocaleDateString("tr-TR");
- let data=[];
- kuryeler.forEach(k=>{
-  if(k.alacak>0)k.devir=true;
-  data.push({Tarih:tarih,Tip:"Kurye",Ad:k.ad,Devir:k.alacak});
- });
- isletmeler.forEach(i=>{
-  if(i.borc>0)i.devir=true;
-  data.push({Tarih:tarih,Tip:"İşletme",Ad:i.ad,Devir:i.borc});
- });
  let wb=XLSX.utils.book_new();
- let ws=XLSX.utils.json_to_sheet(data);
- XLSX.utils.book_append_sheet(wb,ws,tarih);
- XLSX.writeFile(wb,"kurye_isletme_takip.xlsx");
-
- gunlukToplam=0;
- kaydet();listele();
+ let ws=XLSX.utils.json_to_sheet([
+  ...data.kurye.map(k=>({Tip:"Kurye",Ad:k.ad,Borc:k.borc})),
+  ...data.isletme.map(i=>({Tip:"İşletme",Ad:i.ad,Borc:i.borc}))
+ ]);
+ XLSX.utils.book_append_sheet(wb,ws,new Date().toLocaleDateString());
+ XLSX.writeFile(wb,"Gunluk_Takip.xlsx");
 }
+
+function loadData(){render()}
 </script>
 
 </body>
