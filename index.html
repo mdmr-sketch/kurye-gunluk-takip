@@ -5,28 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
-.tabbar{display:flex;gap:5px}
-.tabbar button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
+.tabbar{display:flex;gap:5px;margin-bottom:10px}
+.tabbar button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
 .active{background:#2563eb;color:#fff}
 .passive{background:#334155;color:#94a3b8}
 input,select,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input,select{background:#334155;color:#fff}
-button{background:#3b82f6;color:#fff;font-weight:bold}
+button{background:#3b82f6;color:#fff;font-weight:bold;cursor:pointer}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:10px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .icon{width:10px;height:10px;border-radius:50%;display:inline-block}
 .red{background:#ef4444}
 .blue{background:#3b82f6}
 .green{background:#22c55e}
-.actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569}
+.actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569;cursor:pointer}
 .warn{background:#facc15;color:#000}
 .hidden{display:none}
 </style>
 </head>
-
 <body>
 
 <div class="tabbar">
@@ -41,67 +39,99 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <button onclick="excel()">EXCEL AKTAR</button>
 
 <script>
-let today=new Date().toLocaleDateString()
-let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
+let today = new Date().toLocaleDateString();
+let data = JSON.parse(localStorage.getItem("takip")) || {kurye: [], isletme: []};
+let editIndex = null, editType = null;
 
-function save(){localStorage.setItem("takip",JSON.stringify(data));render()}
+function save(){localStorage.setItem("takip", JSON.stringify(data)); render();}
+
 function tab(x){
-  kurye.classList.add("hidden");isletme.classList.add("hidden")
-  tKurye.className="passive";tIsletme.className="passive"
-  document.getElementById(x).classList.remove("hidden")
-  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).className="active"
+  kurye.classList.add("hidden");
+  isletme.classList.add("hidden");
+  tKurye.className="passive";
+  tIsletme.className="passive";
+  document.getElementById(x).classList.remove("hidden");
+  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).className="active";
 }
-function icon(t){return t>0?"red":t<0?"blue":"green"}
 
-function ekle(type,ad,paket,ucret){
-  data[type].push({ad,paket,tutar:paket*ucret,gun:today,tip:"gunluk"})
-  save()
+function icon(t){return t>0?"red":t<0?"blue":"green";}
+
+function ekle(type, ad, paket, ucret){
+  if(!ad) return alert("İsim girin");
+  paket = Number(paket)||0;
+  ucret = Number(ucret)||0;
+  let tutar = paket * ucret;
+  if(editIndex!==null){
+    Object.assign(data[type][editIndex], {ad, paket, tutar, tip:"gunluk"});
+    editIndex=null;
+  }else{
+    data[type].push({ad, paket, tutar, gun:today, tip:"gunluk"});
+  }
+  save();
 }
-function odeme(type,ad,tutar){
-  data[type].push({ad,paket:0,tutar:-tutar,gun:today,tip:"odeme"})
-  save()
+
+function odeme(type, ad, tutar){
+  if(!ad) return alert("İsim seçin");
+  tutar = Number(tutar)||0;
+  data[type].push({ad, paket:0, tutar:-tutar, gun:today, tip:"odeme"});
+  save();
+}
+
+function duzenle(type, i){
+  editIndex = i;
+  editType = type;
+  let x = data[type][i];
+  if(x.tip==="gunluk"){
+    if(type==="kurye"){ ka.value=x.ad; kp.value=x.paket; ku.value=x.tutar/x.paket; }
+    if(type==="isletme"){ ia.value=x.ad; ip.value=x.paket; iu.value=x.tutar/x.paket; }
+  }
+}
+
+function sil(type, i){
+  if(confirm("Silinsin mi?")){
+    data[type].splice(i,1);
+    save();
+  }
 }
 
 function gunSonu(){
   ["kurye","isletme"].forEach(type=>{
-    let map={}
-    data[type].forEach(x=>{
-      map[x.ad]=(map[x.ad]||0)+x.tutar
-    })
-
-    data[type]=[]
+    let map={};
+    data[type].forEach(x=>{map[x.ad]=(map[x.ad]||0)+x.tutar;});
+    let dev = [];
     Object.entries(map).forEach(([ad,toplam])=>{
-      if(toplam>0){
-        data[type].push({ad,paket:0,tutar:toplam,gun:today,tip:"Devir Borç"})
-      }
-      if(toplam<0){
-        data[type].push({ad,paket:0,tutar:toplam,gun:today,tip:"Devir Alacak"})
-      }
-    })
-  })
-  save()
+      if(toplam>0) dev.push({ad, paket:0, tutar:toplam, gun:today, tip:"Devir Borç"});
+      if(toplam<0) dev.push({ad, paket:0, tutar:toplam, gun:today, tip:"Devir Alacak"});
+    });
+    data[type] = dev; // Sadece borcu olanlar kalır
+  });
+  save();
 }
 
 function excel(){
-  let wb=XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"Kurye")
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"Isletme")
-  XLSX.writeFile(wb,"Gunluk_Takip.xlsx")
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.kurye), "Kurye");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.isletme), "Isletme");
+  XLSX.writeFile(wb, "Gunluk_Takip.xlsx");
 }
 
 function tablo(type){
   return `
   <table>
-    <tr><th></th><th>Ad</th><th>Tür</th><th>Tutar</th></tr>
-    ${data[type].map(x=>`
+    <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th>Tip</th><th></th></tr>
+    ${data[type].map((x,i)=>`
       <tr>
         <td><span class="icon ${icon(x.tutar)}"></span></td>
         <td>${x.ad}</td>
-        <td>${x.tip}</td>
+        <td>${x.paket}</td>
         <td>${x.tutar} ₺</td>
-      </tr>
-    `).join("")}
-  </table>`
+        <td>${x.tip}</td>
+        <td class="actions">
+          ${x.tip==="gunluk"?`<button onclick="duzenle('${type}',${i})">✏️</button>`:""}
+          <button onclick="sil('${type}',${i})">✖</button>
+        </td>
+      </tr>`).join("")}
+  </table>`;
 }
 
 function render(){
@@ -110,28 +140,25 @@ function render(){
     <input id="kp" type="number" placeholder="Paket">
     <input id="ku" type="number" placeholder="Ücret">
     <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
-
     <select id="ko">${[...new Set(data.kurye.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
     <input id="kt" type="number" placeholder="Ödeme">
     <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
-
     ${tablo("kurye")}
-  `
+  `;
+  
   isletme.innerHTML=`
     <input id="ia" placeholder="İşletme adı">
     <input id="ip" type="number" placeholder="Paket">
     <input id="iu" type="number" placeholder="Ücret">
     <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
-
     <select id="io">${[...new Set(data.isletme.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
     <input id="it" type="number" placeholder="Ödeme">
     <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
-
     ${tablo("isletme")}
-  `
+  `;
 }
 
-render()
+render();
 </script>
 </body>
 </html>
