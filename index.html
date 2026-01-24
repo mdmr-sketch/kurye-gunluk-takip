@@ -3,24 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye & İşletme Günlük Takip</title>
+<title>Kurye & İşletme Takip</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
-.tabs{display:flex;gap:5px}
+.tabs{display:flex;gap:6px}
 .tabs button{flex:1;padding:10px;border:none;border-radius:6px;background:#334155;color:#fff}
 .tabs button.active{background:#3b82f6}
 .section{margin-top:15px}
 input,button{width:100%;padding:8px;margin:4px 0;border:none;border-radius:5px}
 input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
+button.warn{background:#facc15}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .icon{width:10px;height:10px;border-radius:50%;display:inline-block}
 .red{background:#ef4444}
 .green{background:#22c55e}
 .blue{background:#3b82f6}
-.action{font-size:14px;cursor:pointer;margin:0 4px}
+.action{font-size:13px;cursor:pointer;margin:0 3px}
+.footerBtn{margin-top:15px}
 small{color:#94a3b8}
 </style>
 </head>
@@ -45,10 +48,15 @@ small{color:#94a3b8}
 
 <table>
 <thead>
-<tr><th>Durum</th><th>Tarih</th><th>Kurye</th><th>Paket</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th>İşlem</th></tr>
+<tr>
+<th></th><th>Tarih</th><th>Kurye</th><th>Paket</th>
+<th>Ücret</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th></th>
+</tr>
 </thead>
 <tbody id="kuryeListe"></tbody>
 </table>
+
+<button class="warn footerBtn" onclick="gunSonu()">GÜN SONU</button>
 </div>
 
 <!-- İŞLETME -->
@@ -62,10 +70,15 @@ small{color:#94a3b8}
 
 <table>
 <thead>
-<tr><th>Durum</th><th>Tarih</th><th>İşletme</th><th>Paket</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th>İşlem</th></tr>
+<tr>
+<th></th><th>Tarih</th><th>İşletme</th><th>Paket</th>
+<th>Tel</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th></th>
+</tr>
 </thead>
 <tbody id="isletmeListe"></tbody>
 </table>
+
+<button class="warn footerBtn" onclick="gunSonu()">GÜN SONU</button>
 </div>
 
 <script>
@@ -73,84 +86,103 @@ let kurye = JSON.parse(localStorage.getItem("kurye"))||[]
 let isletme = JSON.parse(localStorage.getItem("isletme"))||[]
 
 function showTab(t){
-document.getElementById("kurye").style.display=t=="kurye"?"block":"none"
-document.getElementById("isletme").style.display=t=="isletme"?"block":"none"
+kurye.style.display=t=="kurye"?"block":"none"
+isletme.style.display=t=="isletme"?"block":"none"
 kuryeTab.classList.toggle("active",t=="kurye")
 isletmeTab.classList.toggle("active",t=="isletme")
 }
 
 function tarih(){return new Date().toLocaleDateString("tr-TR")}
-
-function durumIcon(b){
-if(b>0)return'<span class="icon blue"></span>'
-if(b<0)return'<span class="icon red"></span>'
-return'<span class="icon green"></span>'
-}
+function icon(b){return b>0?'<span class="icon blue"></span>':b<0?'<span class="icon red"></span>':'<span class="icon green"></span>'}
 
 /* KURYE */
 function ekleKurye(){
 let p=+k_paket.value||0,u=+k_ucret.value||0,o=+k_odeme.value||0
-let t=p*u
-kurye.push({t:tarih(),ad:k_ad.value,p:p,tutar:t,odeme:o,bakiye:t-o})
+kurye.push({t:tarih(),ad:k_ad.value,p,u,tutar:p*u,odeme:o,bakiye:p*u-o})
 kaydet()
 }
 
 function kuryeListele(){
-let html="",tp=0,to=0
+let h="",tp=0,net=0
 kurye.forEach((x,i)=>{
-tp+=x.p;to+=x.bakiye
-html+=`<tr>
-<td>${durumIcon(x.bakiye)}</td>
+tp+=x.p; net+=x.bakiye
+h+=`<tr>
+<td>${icon(x.bakiye)}</td>
 <td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
-<td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
+<td>${x.u}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
 <td>
 <span class="action" onclick="duzenleKurye(${i})">✏️</span>
 <span class="action" onclick="silKurye(${i})">🗑</span>
 </td></tr>`
 })
-kuryeListe.innerHTML=html
-kuryeToplam.innerHTML=`<small>Toplam Paket: ${tp} | Net: ${to}</small>`
+kuryeListe.innerHTML=h
+kuryeToplam.innerHTML=`<small>Toplam Paket: ${tp} | Net: ${net}</small>`
 }
 
 /* İŞLETME */
 function ekleIsletme(){
 let p=+i_paket.value||0,tel=+i_tel.value||0,o=+i_odeme.value||0
-let t=p*tel
-isletme.push({t:tarih(),ad:i_ad.value,p:p,tutar:t,odeme:o,bakiye:t-o})
+isletme.push({t:tarih(),ad:i_ad.value,p,tel,tutar:p*tel,odeme:o,bakiye:p*tel-o})
 kaydet()
 }
 
 function isletmeListele(){
-let html=""
+let h=""
 isletme.forEach((x,i)=>{
-html+=`<tr>
-<td>${durumIcon(x.bakiye)}</td>
+h+=`<tr>
+<td>${icon(x.bakiye)}</td>
 <td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
-<td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
+<td>${x.tel}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
 <td>
 <span class="action" onclick="duzenleIsletme(${i})">✏️</span>
 <span class="action" onclick="silIsletme(${i})">🗑</span>
 </td></tr>`
 })
-isletmeListe.innerHTML=html
+isletmeListe.innerHTML=h
 }
 
+/* DÜZENLE / SİL */
 function silKurye(i){if(confirm("Silinsin mi?")){kurye.splice(i,1);kaydet()}}
 function silIsletme(i){if(confirm("Silinsin mi?")){isletme.splice(i,1);kaydet()}}
 
 function duzenleKurye(i){
 let x=kurye[i]
-let p=prompt("Paket",x.p);if(p===null)return
-let o=prompt("Ödeme",x.odeme)
-x.p=+p;x.odeme=+o;x.tutar=x.p*(x.tutar/x.p||0);x.bakiye=x.tutar-x.odeme
+x.p=+prompt("Paket",x.p)
+x.u=+prompt("Ücret",x.u)
+x.odeme=+prompt("Ödeme",x.odeme)
+x.tutar=x.p*x.u
+x.bakiye=x.tutar-x.odeme
 kaydet()
 }
 
 function duzenleIsletme(i){
 let x=isletme[i]
-let p=prompt("Paket",x.p);if(p===null)return
-let o=prompt("Ödeme",x.odeme)
-x.p=+p;x.odeme=+o;x.tutar=x.tutar;x.bakiye=x.tutar-x.odeme
+x.p=+prompt("Paket",x.p)
+x.tel=+prompt("Tel",x.tel)
+x.odeme=+prompt("Ödeme",x.odeme)
+x.tutar=x.p*x.tel
+x.bakiye=x.tutar-x.odeme
+kaydet()
+}
+
+/* GÜN SONU + EXCEL */
+function gunSonu(){
+if(!confirm("Gün sonu alınacak. Emin misin?"))return
+
+let wb=XLSX.utils.book_new()
+let wsData=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
+kurye.forEach(x=>wsData.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
+wsData.push([])
+wsData.push(["İŞLETMELER"])
+wsData.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
+isletme.forEach(x=>wsData.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
+
+let ws=XLSX.utils.aoa_to_sheet(wsData)
+XLSX.utils.book_append_sheet(wb,ws,tarih())
+XLSX.writeFile(wb,"kurye_isletme_takip.xlsx")
+
+kurye=kurye.filter(x=>x.bakiye!=0)
+isletme=isletme.filter(x=>x.bakiye!=0)
 kaydet()
 }
 
