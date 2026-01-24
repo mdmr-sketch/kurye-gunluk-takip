@@ -20,6 +20,17 @@ button.warn{background:#facc15;color:#000}
 button.danger{background:#ef4444}
 button.edit{background:#64748b}
 
+.summary{
+  background:#020617;
+  border:1px solid #334155;
+  padding:10px;
+  border-radius:6px;
+  margin-top:10px;
+  text-align:center;
+  font-weight:bold;
+  color:#facc15
+}
+
 table{width:100%;font-size:13px;border-collapse:collapse;margin-top:6px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 
@@ -29,7 +40,6 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .blue{background:#3b82f6}
 
 .devir{font-size:11px;color:#facc15}
-
 .hidden{display:none}
 
 .actions button{
@@ -45,6 +55,10 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <div class="tabs">
   <button onclick="sekme('kurye')">🚴 Kurye</button>
   <button onclick="sekme('isletme')">🏪 İşletme</button>
+</div>
+
+<div class="summary" id="gunlukToplam">
+📦 Bugünkü Dağıtım Toplamı: 0 ₺
 </div>
 
 <!-- KURYE -->
@@ -94,10 +108,12 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <script>
 let kuryeler=JSON.parse(localStorage.getItem("kuryeler"))||[];
 let isletmeler=JSON.parse(localStorage.getItem("isletmeler"))||[];
+let gunlukToplam=JSON.parse(localStorage.getItem("gunlukToplam"))||0;
 
 function kaydet(){
  localStorage.setItem("kuryeler",JSON.stringify(kuryeler));
  localStorage.setItem("isletmeler",JSON.stringify(isletmeler));
+ localStorage.setItem("gunlukToplam",JSON.stringify(gunlukToplam));
 }
 
 function sekme(x){
@@ -108,9 +124,11 @@ function sekme(x){
 function kuryePaket(){
  let ad=kAd.value,p=+kPaket.value,u=+kUcret.value;
  if(!ad||!p||!u)return;
+ let tutar=p*u;
  let k=kuryeler.find(x=>x.ad===ad);
  if(!k){k={ad,alacak:0,devir:false};kuryeler.push(k)}
- k.alacak+=p*u; k.devir=false;
+ k.alacak+=tutar; k.devir=false;
+ gunlukToplam+=tutar;
  kaydet();listele();
 }
 
@@ -125,9 +143,11 @@ function kuryeOdeme(){
 function isletmePaket(){
  let ad=iAd.value,p=+iPaket.value,u=+iUcret.value;
  if(!ad||!p||!u)return;
+ let tutar=p*u;
  let i=isletmeler.find(x=>x.ad===ad);
  if(!i){i={ad,borc:0,devir:false};isletmeler.push(i)}
- i.borc+=p*u; i.devir=false;
+ i.borc+=tutar; i.devir=false;
+ gunlukToplam+=tutar;
  kaydet();listele();
 }
 
@@ -139,17 +159,22 @@ function isletmeOdeme(){
  kaydet();listele();
 }
 
-function duzenleKurye(i){
- let t=prompt("Yeni alacak tutarı:",kuryeler[i].alacak);
- if(t!==null){kuryeler[i].alacak=+t;kaydet();listele();}
+function silKurye(i){
+ if(confirm("Bu kurye kaydını silmek istiyor musun?")){
+  kuryeler.splice(i,1);kaydet();listele();
+ }
 }
 
-function duzenleIsletme(i){
- let t=prompt("Yeni borç tutarı:",isletmeler[i].borc);
- if(t!==null){isletmeler[i].borc=+t;kaydet();listele();}
+function silIsletme(i){
+ if(confirm("Bu işletme kaydını silmek istiyor musun?")){
+  isletmeler.splice(i,1);kaydet();listele();
+ }
 }
 
 function listele(){
+ document.getElementById("gunlukToplam").innerText=
+  "📦 Bugünkü Dağıtım Toplamı: "+gunlukToplam+" ₺";
+
  kuryeListe.innerHTML="";
  kuryeler.forEach((k,i)=>{
   let renk=k.alacak>0?"blue":"green";
@@ -161,7 +186,7 @@ function listele(){
    <td>${k.devir?'<span class="devir">DEVİR</span>':''}</td>
    <td class="actions">
     <button class="edit" onclick="duzenleKurye(${i})">✏️</button>
-    <button class="danger" onclick="kuryeler.splice(${i},1);kaydet();listele()">🗑</button>
+    <button class="danger" onclick="silKurye(${i})">🗑</button>
    </td>
   </tr>`;
  });
@@ -177,27 +202,39 @@ function listele(){
    <td>${i.devir?'<span class="devir">DEVİR</span>':''}</td>
    <td class="actions">
     <button class="edit" onclick="duzenleIsletme(${x})">✏️</button>
-    <button class="danger" onclick="isletmeler.splice(${x},1);kaydet();listele()">🗑</button>
+    <button class="danger" onclick="silIsletme(${x})">🗑</button>
    </td>
   </tr>`;
  });
+}
+
+function duzenleKurye(i){
+ let t=prompt("Yeni alacak tutarı:",kuryeler[i].alacak);
+ if(t!==null){kuryeler[i].alacak=+t;kaydet();listele();}
+}
+
+function duzenleIsletme(i){
+ let t=prompt("Yeni borç tutarı:",isletmeler[i].borc);
+ if(t!==null){isletmeler[i].borc=+t;kaydet();listele();}
 }
 
 function gunSonu(){
  let tarih=new Date().toLocaleDateString("tr-TR");
  let data=[];
  kuryeler.forEach(k=>{
-  if(k.alacak>0){k.devir=true}
+  if(k.alacak>0)k.devir=true;
   data.push({Tarih:tarih,Tip:"Kurye",Ad:k.ad,Devir:k.alacak});
  });
  isletmeler.forEach(i=>{
-  if(i.borc>0){i.devir=true}
+  if(i.borc>0)i.devir=true;
   data.push({Tarih:tarih,Tip:"İşletme",Ad:i.ad,Devir:i.borc});
  });
  let wb=XLSX.utils.book_new();
  let ws=XLSX.utils.json_to_sheet(data);
  XLSX.utils.book_append_sheet(wb,ws,tarih);
  XLSX.writeFile(wb,"kurye_isletme_takip.xlsx");
+
+ gunlukToplam=0;
  kaydet();listele();
 }
 </script>
