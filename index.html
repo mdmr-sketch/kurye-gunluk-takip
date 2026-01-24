@@ -23,6 +23,7 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569;cursor:pointer}
 .warn{background:#facc15;color:#000}
 .hidden{display:none}
+.section{margin-top:15px;padding:10px;border-top:1px solid #334155}
 </style>
 </head>
 <body>
@@ -37,6 +38,12 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 
 <button class="warn" onclick="gunSonu()">GÜN SONU AL</button>
 <button onclick="excel()">EXCEL AKTAR</button>
+
+<div id="devirSection" class="section">
+  <h3>DEVİR (Gün Sonu)</h3>
+  <div id="devirKurye"></div>
+  <div id="devirIsletme"></div>
+</div>
 
 <script>
 let today = new Date().toLocaleDateString();
@@ -94,25 +101,26 @@ function sil(type, i){
   }
 }
 
+let devirData = {kurye: [], isletme: []};
+
 function gunSonu(){
+  devirData = {kurye: [], isletme: []};
   ["kurye","isletme"].forEach(type=>{
     let map={};
     data[type].forEach(x=>{map[x.ad]=(map[x.ad]||0)+x.tutar;});
-    let dev = [];
     Object.entries(map).forEach(([ad,toplam])=>{
-      if(toplam>0) dev.push({ad, paket:0, tutar:toplam, gun:today, tip:"Devir Borç"});
-      if(toplam<0) dev.push({ad, paket:0, tutar:toplam, gun:today, tip:"Devir Alacak"});
+      if(toplam>0) devirData[type].push({ad, tutar:toplam, tip:"Devir Borç"});
+      if(toplam<0) devirData[type].push({ad, tutar:toplam, tip:"Devir Alacak"});
     });
-    data[type] = dev; // Sadece borcu olanlar kalır
   });
   save();
 }
 
 function excel(){
   let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.kurye), "Kurye");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.isletme), "Isletme");
-  XLSX.writeFile(wb, "Gunluk_Takip.xlsx");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"Kurye");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"Isletme");
+  XLSX.writeFile(wb,"Gunluk_Takip.xlsx");
 }
 
 function tablo(type){
@@ -130,6 +138,25 @@ function tablo(type){
           ${x.tip==="gunluk"?`<button onclick="duzenle('${type}',${i})">✏️</button>`:""}
           <button onclick="sil('${type}',${i})">✖</button>
         </td>
+      </tr>`).join("")}
+  </table>`;
+}
+
+function renderDevir(){
+  devirKurye.innerHTML = devirTable(devirData.kurye);
+  devirIsletme.innerHTML = devirTable(devirData.isletme);
+}
+
+function devirTable(arr){
+  if(!arr.length) return "<p>Devir yok</p>";
+  return `<table>
+    <tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th></tr>
+    ${arr.map(x=>`
+      <tr>
+        <td><span class="icon ${icon(x.tutar)}"></span></td>
+        <td>${x.ad}</td>
+        <td>${x.tip}</td>
+        <td>${x.tutar} ₺</td>
       </tr>`).join("")}
   </table>`;
 }
@@ -156,6 +183,7 @@ function render(){
     <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
     ${tablo("isletme")}
   `;
+  renderDevir();
 }
 
 render();
