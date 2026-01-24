@@ -3,188 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye & İşletme Takip – Çekirdek</title>
+<title>Kurye & İşletme Günlük Takip</title>
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;margin:0;padding:10px}
-.tabs{display:flex;gap:6px;margin-bottom:10px}
-.tabs button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold}
-.active{background:#3b82f6;color:#fff}
-.passive{background:#334155;color:#fff}
-
-.section{border-bottom:1px solid #334155;padding-bottom:10px;margin-bottom:10px}
-input,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
+.tabs{display:flex;gap:5px}
+.tabs button{flex:1;padding:10px;border:none;border-radius:6px;background:#334155;color:#fff}
+.tabs button.active{background:#3b82f6}
+.section{margin-top:15px}
+input,button{width:100%;padding:8px;margin:4px 0;border:none;border-radius:5px}
 input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
-
-.person{margin-bottom:12px}
-.header{
- display:flex;
- justify-content:space-between;
- align-items:center;
- font-weight:bold;
-}
-.packages{font-size:13px;margin-left:10px;margin-top:4px}
-.small{padding:2px 6px;font-size:11px}
-
-.red{color:#ef4444}
-.green{color:#22c55e}
-.blue{color:#38bdf8}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
+.icon{width:10px;height:10px;border-radius:50%;display:inline-block}
+.red{background:#ef4444}
+.green{background:#22c55e}
+.blue{background:#3b82f6}
+.action{font-size:14px;cursor:pointer;margin:0 4px}
+small{color:#94a3b8}
 </style>
 </head>
 
-<body onload="loadData()">
+<body>
 
 <div class="tabs">
-  <button id="tKurye" class="active" onclick="showTab('kurye')">Kurye</button>
-  <button id="tIsletme" class="passive" onclick="showTab('isletme')">İşletme</button>
+  <button id="kuryeTab" class="active" onclick="showTab('kurye')">Kurye</button>
+  <button id="isletmeTab" onclick="showTab('isletme')">İşletme</button>
 </div>
 
 <!-- KURYE -->
-<div id="kurye">
-  <div class="section">
-    <h3>Kurye Dağıtım</h3>
-    <input id="k_ad" placeholder="Kurye Adı">
-    <input id="k_paket" type="number" placeholder="Paket">
-    <input id="k_ucret" type="number" placeholder="Paket Ücreti">
-    <button onclick="kuryeDagitim()">Ekle</button>
-  </div>
+<div id="kurye" class="section">
+<h3>Kurye Günlük Kayıt</h3>
+<input id="k_ad" placeholder="Kurye adı">
+<input id="k_paket" type="number" placeholder="Paket sayısı">
+<input id="k_ucret" type="number" placeholder="Paket ücreti">
+<input id="k_odeme" type="number" placeholder="Ödeme (varsa)">
+<button onclick="ekleKurye()">Kaydet</button>
 
-  <div class="section">
-    <h3>Kurye Ödeme</h3>
-    <input id="k_odeme_ad" placeholder="Kurye Adı">
-    <input id="k_odeme" type="number" placeholder="Ödeme">
-    <button onclick="kuryeOdeme()">Ödeme Gir</button>
-  </div>
+<div id="kuryeToplam"></div>
 
-  <div id="kuryeList"></div>
+<table>
+<thead>
+<tr><th>Durum</th><th>Tarih</th><th>Kurye</th><th>Paket</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th>İşlem</th></tr>
+</thead>
+<tbody id="kuryeListe"></tbody>
+</table>
 </div>
 
 <!-- İŞLETME -->
-<div id="isletme" style="display:none">
-  <div class="section">
-    <h3>İşletme Dağıtım</h3>
-    <input id="i_ad" placeholder="İşletme Adı">
-    <input id="i_paket" type="number" placeholder="Paket">
-    <input id="i_ucret" type="number" placeholder="Paket Ücreti">
-    <button onclick="isletmeDagitim()">Ekle</button>
-  </div>
+<div id="isletme" class="section" style="display:none">
+<h3>İşletme Günlük Kayıt</h3>
+<input id="i_ad" placeholder="İşletme adı">
+<input id="i_paket" type="number" placeholder="Paket (yoksa boş)">
+<input id="i_tel" type="number" placeholder="Paket ücreti">
+<input id="i_odeme" type="number" placeholder="Ödeme (varsa)">
+<button onclick="ekleIsletme()">Kaydet</button>
 
-  <div class="section">
-    <h3>İşletme Ödeme</h3>
-    <input id="i_odeme_ad" placeholder="İşletme Adı">
-    <input id="i_odeme" type="number" placeholder="Ödeme">
-    <button onclick="isletmeOdeme()">Ödeme Al</button>
-  </div>
-
-  <div id="isletmeList"></div>
+<table>
+<thead>
+<tr><th>Durum</th><th>Tarih</th><th>İşletme</th><th>Paket</th><th>Tutar</th><th>Ödeme</th><th>Bakiye</th><th>İşlem</th></tr>
+</thead>
+<tbody id="isletmeListe"></tbody>
+</table>
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("cekirdek")) || {kurye:{}, isletme:{}};
-function save(){localStorage.setItem("cekirdek",JSON.stringify(data))}
-function today(){return new Date().toISOString().split("T")[0]}
+let kurye = JSON.parse(localStorage.getItem("kurye"))||[]
+let isletme = JSON.parse(localStorage.getItem("isletme"))||[]
 
 function showTab(t){
- kurye.style.display=t=="kurye"?"block":"none";
- isletme.style.display=t=="isletme"?"block":"none";
- tKurye.className=t=="kurye"?"active":"passive";
- tIsletme.className=t=="isletme"?"active":"passive";
+document.getElementById("kurye").style.display=t=="kurye"?"block":"none"
+document.getElementById("isletme").style.display=t=="isletme"?"block":"none"
+kuryeTab.classList.toggle("active",t=="kurye")
+isletmeTab.classList.toggle("active",t=="isletme")
 }
 
-function add(type,name,obj){
- if(!data[type][name]) data[type][name]=[];
- data[type][name].push(obj);
- save(); render();
+function tarih(){return new Date().toLocaleDateString("tr-TR")}
+
+function durumIcon(b){
+if(b>0)return'<span class="icon blue"></span>'
+if(b<0)return'<span class="icon red"></span>'
+return'<span class="icon green"></span>'
 }
 
-/* EKLEME */
-function kuryeDagitim(){
- add("kurye",k_ad.value,{tip:"dagitim",paket:+k_paket.value,ucret:+k_ucret.value,tarih:today()});
-}
-function kuryeOdeme(){
- add("kurye",k_odeme_ad.value,{tip:"odeme",miktar:+k_odeme.value,tarih:today()});
-}
-function isletmeDagitim(){
- add("isletme",i_ad.value,{tip:"dagitim",paket:+i_paket.value,ucret:+i_ucret.value,tarih:today()});
-}
-function isletmeOdeme(){
- add("isletme",i_odeme_ad.value,{tip:"odeme",miktar:+i_odeme.value,tarih:today()});
+/* KURYE */
+function ekleKurye(){
+let p=+k_paket.value||0,u=+k_ucret.value||0,o=+k_odeme.value||0
+let t=p*u
+kurye.push({t:tarih(),ad:k_ad.value,p:p,tutar:t,odeme:o,bakiye:t-o})
+kaydet()
 }
 
-/* HESAPLAR */
-function hesap(liste,isKurye){
- return liste.reduce((t,e)=>{
-  if(e.tip=="dagitim") return t+(isKurye?-(e.paket*e.ucret):(e.paket*e.ucret));
-  return t+(isKurye?e.miktar:-e.miktar);
- },0);
+function kuryeListele(){
+let html="",tp=0,to=0
+kurye.forEach((x,i)=>{
+tp+=x.p;to+=x.bakiye
+html+=`<tr>
+<td>${durumIcon(x.bakiye)}</td>
+<td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
+<td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
+<td>
+<span class="action" onclick="duzenleKurye(${i})">✏️</span>
+<span class="action" onclick="silKurye(${i})">🗑</span>
+</td></tr>`
+})
+kuryeListe.innerHTML=html
+kuryeToplam.innerHTML=`<small>Toplam Paket: ${tp} | Net: ${to}</small>`
 }
 
-function gunlukPaketler(liste){
- let g={};
- liste.filter(e=>e.tip=="dagitim").forEach(e=>{
-  g[e.tarih]=(g[e.tarih]||0)+e.paket;
- });
- return g;
+/* İŞLETME */
+function ekleIsletme(){
+let p=+i_paket.value||0,tel=+i_tel.value||0,o=+i_odeme.value||0
+let t=p*tel
+isletme.push({t:tarih(),ad:i_ad.value,p:p,tutar:t,odeme:o,bakiye:t-o})
+kaydet()
 }
 
-/* EKRAN */
-function render(){
- kuryeList.innerHTML=""; isletmeList.innerHTML="";
-
- for(let k in data.kurye){
-  let b=hesap(data.kurye[k],true);
-  let p=gunlukPaketler(data.kurye[k]);
-  let icon=b>0?"🔵":b<0?"🔴":"🟢";
-  let cls=b>0?"blue":b<0?"red":"green";
-
-  kuryeList.innerHTML+=`
-  <div class="person ${cls}">
-    <div class="header">
-      ${icon} ${k} | ${b}₺
-      <span>
-        <button class="small" onclick="editAll('kurye','${k}')">✏️</button>
-        <button class="small" onclick="delAll('kurye','${k}')">🗑</button>
-      </span>
-    </div>
-    <div class="packages">
-      ${Object.entries(p).map(([t,v])=>`${t} → ${v} paket`).join("<br>")}
-    </div>
-  </div>`;
- }
-
- for(let i in data.isletme){
-  let b=hesap(data.isletme[i],false);
-  let p=gunlukPaketler(data.isletme[i]);
-  let icon=b>0?"🔴":"🟢";
-  let cls=b>0?"red":"green";
-
-  isletmeList.innerHTML+=`
-  <div class="person ${cls}">
-    <div class="header">
-      ${icon} ${i} | ${b}₺
-      <span>
-        <button class="small" onclick="editAll('isletme','${i}')">✏️</button>
-        <button class="small" onclick="delAll('isletme','${i}')">🗑</button>
-      </span>
-    </div>
-    <div class="packages">
-      ${Object.entries(p).map(([t,v])=>`${t} → ${v} paket`).join("<br>")}
-    </div>
-  </div>`;
- }
+function isletmeListele(){
+let html=""
+isletme.forEach((x,i)=>{
+html+=`<tr>
+<td>${durumIcon(x.bakiye)}</td>
+<td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
+<td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
+<td>
+<span class="action" onclick="duzenleIsletme(${i})">✏️</span>
+<span class="action" onclick="silIsletme(${i})">🗑</span>
+</td></tr>`
+})
+isletmeListe.innerHTML=html
 }
 
-function delAll(t,n){
- if(!confirm("Tüm kayıtlar silinsin mi?"))return;
- delete data[t][n]; save(); render();
-}
-function editAll(t,n){
- alert("Detay düzenleme bir sonraki adımda (kilit bozulmadan) eklenecek");
+function silKurye(i){if(confirm("Silinsin mi?")){kurye.splice(i,1);kaydet()}}
+function silIsletme(i){if(confirm("Silinsin mi?")){isletme.splice(i,1);kaydet()}}
+
+function duzenleKurye(i){
+let x=kurye[i]
+let p=prompt("Paket",x.p);if(p===null)return
+let o=prompt("Ödeme",x.odeme)
+x.p=+p;x.odeme=+o;x.tutar=x.p*(x.tutar/x.p||0);x.bakiye=x.tutar-x.odeme
+kaydet()
 }
 
-function loadData(){render()}
+function duzenleIsletme(i){
+let x=isletme[i]
+let p=prompt("Paket",x.p);if(p===null)return
+let o=prompt("Ödeme",x.odeme)
+x.p=+p;x.odeme=+o;x.tutar=x.tutar;x.bakiye=x.tutar-x.odeme
+kaydet()
+}
+
+function kaydet(){
+localStorage.setItem("kurye",JSON.stringify(kurye))
+localStorage.setItem("isletme",JSON.stringify(isletme))
+kuryeListele();isletmeListele()
+}
+
+kaydet()
 </script>
-
 </body>
 </html>
