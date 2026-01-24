@@ -15,6 +15,7 @@ input,button{width:100%;padding:10px;margin:4px 0;border:none;border-radius:6px;
 button{background:#3b82f6;font-weight:bold}
 button.warn{background:#facc15;color:#000}
 button.danger{background:#ef4444}
+button.edit{background:#64748b}
 table{width:100%;font-size:13px;border-collapse:collapse;margin-top:5px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .status{width:10px;height:10px;border-radius:50%;display:inline-block}
@@ -22,10 +23,11 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .green{background:#22c55e}
 .blue{background:#3b82f6}
 .hidden{display:none}
+.actions button{margin:2px}
 </style>
 </head>
 
-<body onload="yukle()">
+<body onload="listele()">
 
 <div class="tabs">
   <button onclick="sekme('kurye')">🚴 Kurye</button>
@@ -34,14 +36,19 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 
 <!-- KURYE -->
 <div id="kurye">
-<h2>Kurye Girişi</h2>
+<h2>Kurye Paket Girişi</h2>
 <input id="kAd" placeholder="Kurye Adı">
 <input id="kPaket" type="number" placeholder="Paket Sayısı">
 <input id="kUcret" type="number" placeholder="Paket Ücreti">
-<button onclick="kuryeEkle()">Ekle</button>
+<button onclick="kuryePaket()">Paket Ekle</button>
+
+<h2>Kurye Ödeme (Ben Ödedim)</h2>
+<input id="kOdemeAd" placeholder="Kurye Adı">
+<input id="kOdeme" type="number" placeholder="Ödeme Tutarı">
+<button class="warn" onclick="kuryeOdeme()">Ödeme Yap</button>
 
 <table>
-<thead><tr><th></th><th>Kurye</th><th>İş</th><th>Alacak</th><th></th></tr></thead>
+<thead><tr><th></th><th>Kurye</th><th>Alacak</th><th>İşlem</th></tr></thead>
 <tbody id="kuryeListe"></tbody>
 </table>
 </div>
@@ -54,13 +61,13 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <input id="iUcret" type="number" placeholder="Paket Ücreti">
 <button onclick="isletmePaket()">Paket Ekle</button>
 
-<h2>İşletme Ödeme Girişi</h2>
-<input id="oAd" placeholder="İşletme Adı">
-<input id="oTutar" type="number" placeholder="Ödeme Tutarı">
-<button class="warn" onclick="odemeEkle()">Ödeme Al</button>
+<h2>İşletme Ödeme</h2>
+<input id="iOdemeAd" placeholder="İşletme Adı">
+<input id="iOdeme" type="number" placeholder="Ödeme Tutarı">
+<button class="warn" onclick="isletmeOdeme()">Ödeme Al</button>
 
 <table>
-<thead><tr><th></th><th>İşletme</th><th>Borç</th><th></th></tr></thead>
+<thead><tr><th></th><th>İşletme</th><th>Borç</th><th>İşlem</th></tr></thead>
 <tbody id="isletmeListe"></tbody>
 </table>
 </div>
@@ -72,78 +79,102 @@ let kuryeler=JSON.parse(localStorage.getItem("kuryeler"))||[];
 let isletmeler=JSON.parse(localStorage.getItem("isletmeler"))||[];
 
 function kaydet(){
-  localStorage.setItem("kuryeler",JSON.stringify(kuryeler));
-  localStorage.setItem("isletmeler",JSON.stringify(isletmeler));
+ localStorage.setItem("kuryeler",JSON.stringify(kuryeler));
+ localStorage.setItem("isletmeler",JSON.stringify(isletmeler));
 }
-
-function yukle(){listele()}
 
 function sekme(x){
-  kurye.classList.toggle("hidden",x!=="kurye");
-  isletme.classList.toggle("hidden",x!=="isletme");
+ kurye.classList.toggle("hidden",x!=="kurye");
+ isletme.classList.toggle("hidden",x!=="isletme");
 }
 
-function kuryeEkle(){
-  let ad=kAd.value,p=+kPaket.value,u=+kUcret.value;
-  if(!ad||!p||!u)return;
-  kuryeler.push({ad,alacak:p*u});
-  kaydet();listele();
+function kuryePaket(){
+ let ad=kAd.value,p=+kPaket.value,u=+kUcret.value;
+ if(!ad||!p||!u)return;
+ let k=kuryeler.find(x=>x.ad===ad);
+ if(!k){k={ad,alacak:0};kuryeler.push(k)}
+ k.alacak+=p*u;
+ kaydet();listele();
+}
+
+function kuryeOdeme(){
+ let ad=kOdemeAd.value,t=+kOdeme.value;
+ let k=kuryeler.find(x=>x.ad===ad);
+ if(!k||!t)return;
+ k.alacak-=t;
+ if(k.alacak<0)k.alacak=0;
+ kaydet();listele();
 }
 
 function isletmePaket(){
-  let ad=iAd.value,p=+iPaket.value,u=+iUcret.value;
-  if(!ad||!p||!u)return;
-  let x=isletmeler.find(i=>i.ad===ad);
-  if(!x){x={ad,borc:0};isletmeler.push(x)}
-  x.borc+=p*u;
-  kaydet();listele();
+ let ad=iAd.value,p=+iPaket.value,u=+iUcret.value;
+ if(!ad||!p||!u)return;
+ let i=isletmeler.find(x=>x.ad===ad);
+ if(!i){i={ad,borc:0};isletmeler.push(i)}
+ i.borc+=p*u;
+ kaydet();listele();
 }
 
-function odemeEkle(){
-  let ad=oAd.value,t=+oTutar.value;
-  if(!ad||!t)return;
-  let x=isletmeler.find(i=>i.ad===ad);
-  if(!x)return alert("İşletme bulunamadı");
-  x.borc-=t;
-  if(x.borc<0)x.borc=0;
-  kaydet();listele();
+function isletmeOdeme(){
+ let ad=iOdemeAd.value,t=+iOdeme.value;
+ let i=isletmeler.find(x=>x.ad===ad);
+ if(!i||!t)return;
+ i.borc-=t;
+ if(i.borc<0)i.borc=0;
+ kaydet();listele();
+}
+
+function duzenleKurye(i){
+ let t=prompt("Yeni alacak tutarı:",kuryeler[i].alacak);
+ if(t!==null){kuryeler[i].alacak=+t;kaydet();listele();}
+}
+
+function duzenleIsletme(i){
+ let t=prompt("Yeni borç tutarı:",isletmeler[i].borc);
+ if(t!==null){isletmeler[i].borc=+t;kaydet();listele();}
 }
 
 function listele(){
-  kuryeListe.innerHTML="";
-  kuryeler.forEach((k,i)=>{
-    kuryeListe.innerHTML+=`
-    <tr>
-      <td><span class="status blue"></span></td>
-      <td>${k.ad}</td>
-      <td>-</td>
-      <td>${k.alacak}</td>
-      <td><button class="danger" onclick="kuryeler.splice(${i},1);kaydet();listele()">Sil</button></td>
-    </tr>`;
-  });
+ kuryeListe.innerHTML="";
+ kuryeler.forEach((k,i)=>{
+  let renk=k.alacak>0?"blue":"green";
+  kuryeListe.innerHTML+=`
+  <tr>
+   <td><span class="status ${renk}"></span></td>
+   <td>${k.ad}</td>
+   <td>${k.alacak}</td>
+   <td class="actions">
+    <button class="edit" onclick="duzenleKurye(${i})">✏️</button>
+    <button class="danger" onclick="kuryeler.splice(${i},1);kaydet();listele()">🗑</button>
+   </td>
+  </tr>`;
+ });
 
-  isletmeListe.innerHTML="";
-  isletmeler.forEach((i,x)=>{
-    if(i.borc<=0)return;
-    isletmeListe.innerHTML+=`
-    <tr>
-      <td><span class="status red"></span></td>
-      <td>${i.ad}</td>
-      <td>${i.borc}</td>
-      <td><button class="danger" onclick="isletmeler.splice(${x},1);kaydet();listele()">Sil</button></td>
-    </tr>`;
-  });
+ isletmeListe.innerHTML="";
+ isletmeler.forEach((i,x)=>{
+  let renk=i.borc>0?"red":"green";
+  isletmeListe.innerHTML+=`
+  <tr>
+   <td><span class="status ${renk}"></span></td>
+   <td>${i.ad}</td>
+   <td>${i.borc}</td>
+   <td class="actions">
+    <button class="edit" onclick="duzenleIsletme(${x})">✏️</button>
+    <button class="danger" onclick="isletmeler.splice(${x},1);kaydet();listele()">🗑</button>
+   </td>
+  </tr>`;
+ });
 }
 
 function gunSonu(){
-  let tarih=new Date().toLocaleDateString("tr-TR");
-  let data=[];
-  kuryeler.forEach(k=>data.push({Tarih:tarih,Tip:"Kurye",Ad:k.ad,Tutar:k.alacak}));
-  isletmeler.forEach(i=>data.push({Tarih:tarih,Tip:"İşletme",Ad:i.ad,Devir:i.borc}));
-  let wb=XLSX.utils.book_new();
-  let ws=XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb,ws,tarih);
-  XLSX.writeFile(wb,"kurye_isletme_takip.xlsx");
+ let tarih=new Date().toLocaleDateString("tr-TR");
+ let data=[];
+ kuryeler.forEach(k=>data.push({Tarih:tarih,Tip:"Kurye",Ad:k.ad,Devir:k.alacak}));
+ isletmeler.forEach(i=>data.push({Tarih:tarih,Tip:"İşletme",Ad:i.ad,Devir:i.borc}));
+ let wb=XLSX.utils.book_new();
+ let ws=XLSX.utils.json_to_sheet(data);
+ XLSX.utils.book_append_sheet(wb,ws,tarih);
+ XLSX.writeFile(wb,"kurye_isletme_takip.xlsx");
 }
 </script>
 
