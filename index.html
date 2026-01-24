@@ -18,11 +18,28 @@ button{background:#22c55e;color:#000;font-weight:bold}
 button.warn{background:#facc15}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
-.icon{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* DURUM İKONLARI */
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%}
 .red{background:#ef4444}
 .green{background:#22c55e}
 .blue{background:#3b82f6}
-.action{font-size:13px;cursor:pointer;margin:0 3px}
+
+/* KÜÇÜK BUTONLAR */
+.btnMini{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+width:26px;
+height:26px;
+border-radius:50%;
+font-size:14px;
+cursor:pointer;
+margin:0 2px;
+}
+.edit{background:#38bdf8;color:#000}
+.del{background:#ef4444;color:#fff}
+
 .footerBtn{margin-top:15px}
 small{color:#94a3b8}
 </style>
@@ -63,9 +80,9 @@ small{color:#94a3b8}
 <div id="isletme" class="section" style="display:none">
 <h3>İşletme Günlük Kayıt</h3>
 <input id="i_ad" placeholder="İşletme adı">
-<input id="i_paket" type="number" placeholder="Paket (yoksa boş)">
+<input id="i_paket" type="number" placeholder="Paket">
 <input id="i_tel" type="number" placeholder="Paket ücreti">
-<input id="i_odeme" type="number" placeholder="Ödeme (varsa)">
+<input id="i_odeme" type="number" placeholder="Ödeme">
 <button onclick="ekleIsletme()">Kaydet</button>
 
 <table>
@@ -82,18 +99,22 @@ small{color:#94a3b8}
 </div>
 
 <script>
-let kuryeData = JSON.parse(localStorage.getItem("kurye")) || []
-let isletmeData = JSON.parse(localStorage.getItem("isletme")) || []
+let kuryeData=JSON.parse(localStorage.getItem("kurye"))||[]
+let isletmeData=JSON.parse(localStorage.getItem("isletme"))||[]
 
-function showTab(tab){
-document.getElementById("kurye").style.display = tab==="kurye" ? "block" : "none"
-document.getElementById("isletme").style.display = tab==="isletme" ? "block" : "none"
-document.getElementById("kuryeTab").classList.toggle("active",tab==="kurye")
-document.getElementById("isletmeTab").classList.toggle("active",tab==="isletme")
+function showTab(t){
+document.getElementById("kurye").style.display=t==="kurye"?"block":"none"
+document.getElementById("isletme").style.display=t==="isletme"?"block":"none"
+kuryeTab.classList.toggle("active",t==="kurye")
+isletmeTab.classList.toggle("active",t==="isletme")
 }
 
 function tarih(){return new Date().toLocaleDateString("tr-TR")}
-function icon(b){return b>0?'<span class="icon blue"></span>':b<0?'<span class="icon red"></span>':'<span class="icon green"></span>'}
+function durum(b){
+if(b>0)return'<span class="dot blue"></span>'
+if(b<0)return'<span class="dot red"></span>'
+return'<span class="dot green"></span>'
+}
 
 /* KURYE */
 function ekleKurye(){
@@ -105,14 +126,14 @@ kaydet()
 function kuryeListele(){
 let h="",tp=0,net=0
 kuryeData.forEach((x,i)=>{
-tp+=x.p; net+=x.bakiye
+tp+=x.p;net+=x.bakiye
 h+=`<tr>
-<td>${icon(x.bakiye)}</td>
+<td>${durum(x.bakiye)}</td>
 <td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
 <td>${x.u}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
 <td>
-<span class="action" onclick="duzenleKurye(${i})">✏️</span>
-<span class="action" onclick="silKurye(${i})">🗑</span>
+<span class="btnMini edit" onclick="duzenleKurye(${i})">✏️</span>
+<span class="btnMini del" onclick="silKurye(${i})">🗑</span>
 </td></tr>`
 })
 kuryeListe.innerHTML=h
@@ -130,12 +151,12 @@ function isletmeListele(){
 let h=""
 isletmeData.forEach((x,i)=>{
 h+=`<tr>
-<td>${icon(x.bakiye)}</td>
+<td>${durum(x.bakiye)}</td>
 <td>${x.t}</td><td>${x.ad}</td><td>${x.p}</td>
 <td>${x.tel}</td><td>${x.tutar}</td><td>${x.odeme}</td><td>${x.bakiye}</td>
 <td>
-<span class="action" onclick="duzenleIsletme(${i})">✏️</span>
-<span class="action" onclick="silIsletme(${i})">🗑</span>
+<span class="btnMini edit" onclick="duzenleIsletme(${i})">✏️</span>
+<span class="btnMini del" onclick="silIsletme(${i})">🗑</span>
 </td></tr>`
 })
 isletmeListe.innerHTML=h
@@ -165,24 +186,21 @@ x.bakiye=x.tutar-x.odeme
 kaydet()
 }
 
-/* GÜN SONU + EXCEL */
+/* GÜN SONU */
 function gunSonu(){
 if(!confirm("Gün sonu alınacak. Emin misin?"))return
-
 let wb=XLSX.utils.book_new()
-let data=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
-kuryeData.forEach(x=>data.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
-data.push([])
-data.push(["İŞLETMELER"])
-data.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
-isletmeData.forEach(x=>data.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
-
-let ws=XLSX.utils.aoa_to_sheet(data)
+let d=[["KURYELER"],["Tarih","Ad","Paket","Ücret","Tutar","Ödeme","Bakiye"]]
+kuryeData.forEach(x=>d.push([x.t,x.ad,x.p,x.u,x.tutar,x.odeme,x.bakiye]))
+d.push([])
+d.push(["İŞLETMELER"])
+d.push(["Tarih","Ad","Paket","Tel","Tutar","Ödeme","Bakiye"])
+isletmeData.forEach(x=>d.push([x.t,x.ad,x.p,x.tel,x.tutar,x.odeme,x.bakiye]))
+let ws=XLSX.utils.aoa_to_sheet(d)
 XLSX.utils.book_append_sheet(wb,ws,tarih())
 XLSX.writeFile(wb,"kurye_isletme_takip.xlsx")
-
-kuryeData = kuryeData.filter(x=>x.bakiye!=0)
-isletmeData = isletmeData.filter(x=>x.bakiye!=0)
+kuryeData=kuryeData.filter(x=>x.bakiye!=0)
+isletmeData=isletmeData.filter(x=>x.bakiye!=0)
 kaydet()
 }
 
@@ -192,7 +210,6 @@ localStorage.setItem("isletme",JSON.stringify(isletmeData))
 kuryeListele()
 isletmeListele()
 }
-
 kaydet()
 </script>
 </body>
