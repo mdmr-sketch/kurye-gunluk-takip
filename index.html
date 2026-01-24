@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
 .tabbar{display:flex;gap:5px}
@@ -17,7 +18,9 @@ button{background:#3b82f6;color:#fff;font-weight:bold}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:10px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .icon{width:10px;height:10px;border-radius:50%;display:inline-block}
-.red{background:#ef4444}.green{background:#22c55e}.blue{background:#3b82f6}
+.red{background:#ef4444}
+.green{background:#22c55e}
+.blue{background:#3b82f6}
 .actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569}
 .warn{background:#facc15;color:#000}
 .hidden{display:none}
@@ -40,27 +43,29 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <script>
 let today=new Date().toLocaleDateString()
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
-let edit=null,editType=null
+let editIndex=null,editType=null
 
 function save(){localStorage.setItem("takip",JSON.stringify(data));render()}
+
 function tab(x){
-  kurye.classList.add("hidden");isletme.classList.add("hidden")
-  tKurye.className="passive";tIsletme.className="passive"
+  kurye.classList.add("hidden")
+  isletme.classList.add("hidden")
+  tKurye.className="passive"
+  tIsletme.className="passive"
   document.getElementById(x).classList.remove("hidden")
   document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).className="active"
 }
-function icon(t){return t>0?"red":t<0?"blue":"green"}
 
-function toplam(arr,ad){
-  return arr.filter(x=>x.ad==ad).reduce((a,b)=>a+b.tutar,0)
-}
+function icon(t){return t>0?"red":t<0?"blue":"green"}
 
 function ekle(type,ad,paket,ucret){
   let tutar=paket*ucret
-  if(edit!=null){
-    Object.assign(data[type][edit],{ad,paket,tutar})
-    edit=null
-  }else data[type].push({ad,paket,tutar,gun:today,tip:"islem"})
+  if(editIndex!==null){
+    Object.assign(data[type][editIndex],{ad,paket,tutar})
+    editIndex=null
+  }else{
+    data[type].push({ad,paket,tutar,gun:today,tip:"islem"})
+  }
   save()
 }
 
@@ -70,26 +75,43 @@ function odeme(type,ad,tutar){
 }
 
 function duzenle(type,i){
-  edit=i;editType=type
+  editIndex=i
+  editType=type
   let x=data[type][i]
-  let a=prompt("Ad",x.ad)
-  let p=prompt("Paket",x.paket)
-  let t=prompt("Tutar",x.tutar)
-  Object.assign(x,{ad:a,paket:+p,tutar:+t})
-  save()
+  if(type==="kurye"){
+    ka.value=x.ad
+    kp.value=x.paket
+    ku.value=Math.abs(x.tutar/(x.paket||1))
+  }else{
+    ia.value=x.ad
+    ip.value=x.paket
+    iu.value=Math.abs(x.tutar/(x.paket||1))
+  }
 }
 
 function sil(type,i){
   if(confirm("Silinsin mi?")){
-    data[type].splice(i,1);save()
+    data[type].splice(i,1)
+    save()
   }
 }
 
 function gunSonu(){
-  ["kurye","isletme"].forEach(t=>{
-    let gr={}
-    data[t].forEach(x=>{gr[x.ad]=(gr[x.ad]||0)+x.tutar})
-    data[t]=Object.keys(gr).filter(a=>gr[a]!=0).map(a=>({ad:a,paket:0,tutar:gr[a],gun:today,tip:"devir"}))
+  ["kurye","isletme"].forEach(type=>{
+    let toplam={}
+    data[type].forEach(x=>{
+      toplam[x.ad]=(toplam[x.ad]||0)+x.tutar
+    })
+
+    data[type]=Object.entries(toplam)
+      .filter(([_,t])=> t>0)   // 🔴 SADECE BORCU OLANLAR
+      .map(([ad,tutar])=>({
+        ad,
+        paket:0,
+        tutar,
+        gun:today,
+        tip:"devir"
+      }))
   })
   save()
 }
@@ -103,40 +125,53 @@ function excel(){
 
 function render(){
   kurye.innerHTML=`
-  <input id="ka" placeholder="Kurye adı">
-  <input id="kp" type="number" placeholder="Paket">
-  <input id="ku" type="number" placeholder="Ücret">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
-  <select id="ko">${[...new Set(data.kurye.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
-  <input id="kt" type="number" placeholder="Ödeme">
-  <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
-  ${tablo("kurye")}`
+    <input id="ka" placeholder="Kurye adı">
+    <input id="kp" type="number" placeholder="Paket">
+    <input id="ku" type="number" placeholder="Ücret">
+    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+
+    <select id="ko">${[...new Set(data.kurye.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
+    <input id="kt" type="number" placeholder="Ödeme">
+    <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
+
+    ${tablo("kurye")}
+  `
 
   isletme.innerHTML=`
-  <input id="ia" placeholder="İşletme adı">
-  <input id="ip" type="number" placeholder="Paket">
-  <input id="iu" type="number" placeholder="Ücret">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
-  <select id="io">${[...new Set(data.isletme.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
-  <input id="it" type="number" placeholder="Ödeme">
-  <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
-  ${tablo("isletme")}`
+    <input id="ia" placeholder="İşletme adı">
+    <input id="ip" type="number" placeholder="Paket">
+    <input id="iu" type="number" placeholder="Ücret">
+    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+
+    <select id="io">${[...new Set(data.isletme.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join("")}</select>
+    <input id="it" type="number" placeholder="Ödeme">
+    <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
+
+    ${tablo("isletme")}
+  `
 }
 
 function tablo(type){
-  return `<table><tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>`+
-  data[type].map((x,i)=>`
-  <tr>
-    <td><span class="icon ${icon(x.tutar)}"></span></td>
-    <td>${x.ad}</td><td>${x.paket}</td><td>${x.tutar}</td>
-    <td class="actions">
-      <button onclick="duzenle('${type}',${i})">✏️</button>
-      <button onclick="sil('${type}',${i})">✖</button>
-    </td>
-  </tr>`).join("")+"</table>"
+  return `
+  <table>
+    <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
+    ${data[type].map((x,i)=>`
+      <tr>
+        <td><span class="icon ${icon(x.tutar)}"></span></td>
+        <td>${x.ad}</td>
+        <td>${x.paket}</td>
+        <td>${x.tutar}</td>
+        <td class="actions">
+          <button onclick="duzenle('${type}',${i})">✏️</button>
+          <button onclick="sil('${type}',${i})">✖</button>
+        </td>
+      </tr>
+    `).join("")}
+  </table>`
 }
 
 render()
 </script>
+
 </body>
 </html>
