@@ -18,7 +18,13 @@ input{background:#334155;color:#fff}
 button{background:#22c55e;color:#000;font-weight:bold}
 
 .person{margin-bottom:12px}
-.entry{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
+.header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ font-weight:bold;
+}
+.packages{font-size:13px;margin-left:10px;margin-top:4px}
 .small{padding:2px 6px;font-size:11px}
 
 .red{color:#ef4444}
@@ -75,21 +81,7 @@ button{background:#22c55e;color:#000;font-weight:bold}
 </div>
 
 <script>
-/* === KİLİTLİ VERİ MODELİ ===
-data = {
-  kurye: {
-    "Ahmet":[
-      {tip:"dagitim", paket:10, ucret:8, tarih:"2026-01-24"},
-      {tip:"odeme", miktar:50, tarih:"2026-01-24"}
-    ]
-  },
-  isletme:{}
-}
-BU YAPI DEĞİŞMEYECEK
-============================ */
-
 let data = JSON.parse(localStorage.getItem("cekirdek")) || {kurye:{}, isletme:{}};
-
 function save(){localStorage.setItem("cekirdek",JSON.stringify(data))}
 function today(){return new Date().toISOString().split("T")[0]}
 
@@ -106,15 +98,13 @@ function add(type,name,obj){
  save(); render();
 }
 
-/* KURYE */
+/* EKLEME */
 function kuryeDagitim(){
  add("kurye",k_ad.value,{tip:"dagitim",paket:+k_paket.value,ucret:+k_ucret.value,tarih:today()});
 }
 function kuryeOdeme(){
  add("kurye",k_odeme_ad.value,{tip:"odeme",miktar:+k_odeme.value,tarih:today()});
 }
-
-/* İŞLETME */
 function isletmeDagitim(){
  add("isletme",i_ad.value,{tip:"dagitim",paket:+i_paket.value,ucret:+i_ucret.value,tarih:today()});
 }
@@ -122,6 +112,7 @@ function isletmeOdeme(){
  add("isletme",i_odeme_ad.value,{tip:"odeme",miktar:+i_odeme.value,tarih:today()});
 }
 
+/* HESAPLAR */
 function hesap(liste,isKurye){
  return liste.reduce((t,e)=>{
   if(e.tip=="dagitim") return t+(isKurye?-(e.paket*e.ucret):(e.paket*e.ucret));
@@ -129,68 +120,67 @@ function hesap(liste,isKurye){
  },0);
 }
 
+function gunlukPaketler(liste){
+ let g={};
+ liste.filter(e=>e.tip=="dagitim").forEach(e=>{
+  g[e.tarih]=(g[e.tarih]||0)+e.paket;
+ });
+ return g;
+}
+
+/* EKRAN */
 function render(){
  kuryeList.innerHTML=""; isletmeList.innerHTML="";
 
  for(let k in data.kurye){
   let b=hesap(data.kurye[k],true);
+  let p=gunlukPaketler(data.kurye[k]);
   let icon=b>0?"🔵":b<0?"🔴":"🟢";
   let cls=b>0?"blue":b<0?"red":"green";
 
-  kuryeList.innerHTML+=`<div class="person ${cls}"><b>${icon} ${k} (${b}₺)</b>`;
-  data.kurye[k].forEach((e,i)=>{
-   let txt=e.tip=="dagitim"
-     ?`${e.tarih} | ${e.paket}x${e.ucret} = ${e.paket*e.ucret}`
-     :`${e.tarih} | Ödeme ${e.miktar}`;
-   kuryeList.innerHTML+=`
-    <div class="entry">
-     ${txt}
-     <span>
-      <button class="small" onclick="edit('kurye','${k}',${i})">✏️</button>
-      <button class="small" onclick="del('kurye','${k}',${i})">🗑</button>
-     </span>
-    </div>`;
-  });
-  kuryeList.innerHTML+="</div>";
+  kuryeList.innerHTML+=`
+  <div class="person ${cls}">
+    <div class="header">
+      ${icon} ${k} | ${b}₺
+      <span>
+        <button class="small" onclick="editAll('kurye','${k}')">✏️</button>
+        <button class="small" onclick="delAll('kurye','${k}')">🗑</button>
+      </span>
+    </div>
+    <div class="packages">
+      ${Object.entries(p).map(([t,v])=>`${t} → ${v} paket`).join("<br>")}
+    </div>
+  </div>`;
  }
 
  for(let i in data.isletme){
   let b=hesap(data.isletme[i],false);
+  let p=gunlukPaketler(data.isletme[i]);
   let icon=b>0?"🔴":"🟢";
   let cls=b>0?"red":"green";
 
-  isletmeList.innerHTML+=`<div class="person ${cls}"><b>${icon} ${i} (${b}₺)</b>`;
-  data.isletme[i].forEach((e,x)=>{
-   let txt=e.tip=="dagitim"
-     ?`${e.tarih} | ${e.paket}x${e.ucret} = ${e.paket*e.ucret}`
-     :`${e.tarih} | Ödeme ${e.miktar}`;
-   isletmeList.innerHTML+=`
-    <div class="entry">
-     ${txt}
-     <span>
-      <button class="small" onclick="edit('isletme','${i}',${x})">✏️</button>
-      <button class="small" onclick="del('isletme','${i}',${x})">🗑</button>
-     </span>
-    </div>`;
-  });
-  isletmeList.innerHTML+="</div>";
+  isletmeList.innerHTML+=`
+  <div class="person ${cls}">
+    <div class="header">
+      ${icon} ${i} | ${b}₺
+      <span>
+        <button class="small" onclick="editAll('isletme','${i}')">✏️</button>
+        <button class="small" onclick="delAll('isletme','${i}')">🗑</button>
+      </span>
+    </div>
+    <div class="packages">
+      ${Object.entries(p).map(([t,v])=>`${t} → ${v} paket`).join("<br>")}
+    </div>
+  </div>`;
  }
 }
 
-function del(t,n,i){
- if(!confirm("Silinsin mi?"))return;
- data[t][n].splice(i,1); save(); render();
+function delAll(t,n){
+ if(!confirm("Tüm kayıtlar silinsin mi?"))return;
+ delete data[t][n]; save(); render();
 }
-
-function edit(t,n,i){
- let e=data[t][n][i];
- if(e.tip=="dagitim"){
-  e.paket=+prompt("Paket",e.paket);
-  e.ucret=+prompt("Ücret",e.ucret);
- }else{
-  e.miktar=+prompt("Ödeme",e.miktar);
- }
- save(); render();
+function editAll(t,n){
+ alert("Detay düzenleme bir sonraki adımda (kilit bozulmadan) eklenecek");
 }
 
 function loadData(){render()}
