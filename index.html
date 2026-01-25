@@ -13,6 +13,7 @@ body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
 input,select,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
 input,select{background:#334155;color:#fff}
 button{background:#3b82f6;color:#fff;font-weight:bold;cursor:pointer}
+button.warn{background:#facc15;color:#000}
 button.small{padding:4px;font-size:11px}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:10px}
 th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
@@ -20,10 +21,9 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 .red{background:#ef4444}
 .blue{background:#3b82f6}
 .green{background:#22c55e}
-.actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569;cursor:pointer}
-.warn{background:#facc15;color:#000}
+.actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569}
 .hidden{display:none}
-.section{margin-top:15px;padding:10px;border-top:1px solid #334155}
+.section{margin-top:15px;padding-top:10px;border-top:1px solid #334155}
 </style>
 </head>
 <body><div class="tabbar">
@@ -32,56 +32,55 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 </div><div id="kurye"></div>
 <div id="isletme" class="hidden"></div><button class="warn" onclick="gunSonu()">GÜN SONU AL</button> <button onclick="excel()">EXCEL AKTAR</button>
 
-  <div id="devirIsletme"></div>
-</div><script>
-let today = new Date().toLocaleDateString();
-let data = JSON.parse(localStorage.getItem("takip")) || {kurye: [], isletme: []};
-let devirData = JSON.parse(localStorage.getItem("devir")) || {kurye: [], isletme: []};
-let editIndex = null;
+<script>
+let today=new Date().toLocaleDateString();
+let data=JSON.parse(localStorage.getItem('takip'))||{kurye:[],isletme:[]};
+let devirData=JSON.parse(localStorage.getItem('devir'))||{kurye:[],isletme:[]};
+let editIndex=null;
 
 function save(){
-  localStorage.setItem("takip", JSON.stringify(data));
-  localStorage.setItem("devir", JSON.stringify(devirData));
+  localStorage.setItem('takip',JSON.stringify(data));
+  localStorage.setItem('devir',JSON.stringify(devirData));
   render();
 }
 
 function tab(x){
-  kurye.classList.add("hidden");
-  isletme.classList.add("hidden");
-  tKurye.className="passive";
-  tIsletme.className="passive";
-  document.getElementById(x).classList.remove("hidden");
-  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).className="active";
+  kurye.classList.add('hidden');
+  isletme.classList.add('hidden');
+  tKurye.className='passive';
+  tIsletme.className='passive';
+  document.getElementById(x).classList.remove('hidden');
+  document.getElementById('t'+x.charAt(0).toUpperCase()+x.slice(1)).className='active';
 }
 
-function icon(t){return t>0?"red":t<0?"blue":"green";}
+function icon(t){return t>0?'red':t<0?'blue':'green';}
 
-function ekle(type, ad, paket, ucret){
-  if(!ad) return alert("İsim girin");
+function ekle(type,ad,paket,ucret){
+  if(!ad) return alert('İsim girin');
   paket=Number(paket)||0; ucret=Number(ucret)||0;
   let tutar=paket*ucret;
   if(editIndex!==null){
-    Object.assign(data[type][editIndex],{ad,paket,tutar,tip:"gunluk",gun:today});
+    Object.assign(data[type][editIndex],{ad,paket,tutar,tip:'gunluk',gun:today});
     editIndex=null;
-  } else data[type].push({ad,paket,tutar,tip:"gunluk",gun:today});
+  } else data[type].push({ad,paket,tutar,tip:'gunluk',gun:today});
   save();
 }
 
-function odeme(type, ad, tutar){
-  if(!ad) return alert("İsim seçin");
+function odeme(type,ad,tutar){
+  if(!ad) return alert('İsim seçin');
   tutar=Number(tutar)||0;
-  data[type].push({ad,paket:0,tutar:-tutar,tip:"odeme",gun:today});
+  data[type].push({ad,paket:0,tutar:-tutar,tip:'odeme',gun:today});
   save();
 }
 
-function sil(type,i){if(confirm("Silinsin mi?")){data[type].splice(i,1);save();}}
+function sil(type,i){if(confirm('Silinsin mi?')){data[type].splice(i,1);save();}}
 
 function gunSonu(){
-  ["kurye","isletme"].forEach(type=>{
+  ['kurye','isletme'].forEach(type=>{
     let map={};
     data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
     Object.entries(map).forEach(([ad,toplam])=>{
-      if(toplam!==0) devirData[type].push({ad,tutar:toplam,tip:toplam>0?"Borç":"Alacak"});
+      if(toplam!==0) devirData[type].push({ad,tutar:toplam,tip:toplam>0?'Borç':'Alacak'});
     });
     data[type]=[];
   });
@@ -90,79 +89,64 @@ function gunSonu(){
 
 function excel(){
   let wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"Gunluk_Kurye");
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"Gunluk_Isletme");
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.kurye),"Devir_Kurye");
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.isletme),"Devir_Isletme");
-  XLSX.writeFile(wb,"Kurye_Takip.xlsx");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),'Gunluk_Kurye');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),'Gunluk_Isletme');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.kurye),'Devir_Kurye');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.isletme),'Devir_Isletme');
+  XLSX.writeFile(wb,'Kurye_Takip.xlsx');
 }
 
 function tablo(type){
-  return `<table><tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th>Tip</th><th></th></tr>${data[type].map((x,i)=>`<tr><td><span class="icon ${icon(x.tutar)}"></span></td><td>${x.ad}</td><td>${x.paket}</td><td>${x.tutar}</td><td>${x.tip}</td><td class="actions"><button onclick="sil('${type}',${i})">✖</button></td></tr>`).join("")}</table>`;
+  return `<table><tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th>Tip</th><th></th></tr>${data[type].map((x,i)=>`<tr><td><span class=icon ${icon(x.tutar)}></span></td><td>${x.ad}</td><td>${x.paket}</td><td>${x.tutar}</td><td>${x.tip}</td><td class=actions><button onclick=\"sil('${type}',${i})\">✖</button></td></tr>`).join('')}</table>`;
 }
 
 function devirTable(arr,type){
-  if(!arr.length) return "<p>Devir yok</p>";
-  return `<table>
-    <tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th>İşlem</th></tr>
-    ${arr.map((x,i)=>`
-      <tr>
-        <td><span class="icon ${icon(x.tutar)}"></span></td>
-        <td>${x.ad}</td>
-        <td>${x.tip}</td>
-        <td>${x.tutar}</td>
-        <td class="actions">
-          <button onclick="devirDuzenle('${type}',${i})">✏️</button>
-          <button onclick="devirSil('${type}',${i})">✖</button>
-        </td>
-      </tr>`).join("")}
-  </table>`;
+  if(!arr.length) return '<p>Devir yok</p>';
+  return `<table><tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th></th></tr>${arr.map((x,i)=>`<tr><td><span class=icon ${icon(x.tutar)}></span></td><td>${x.ad}</td><td>${x.tip}</td><td>${x.tutar}</td><td class=actions><button class=small onclick=\"devirDuzenle('${type}',${i})\">✏️</button><button class=small onclick=\"devirSil('${type}',${i})\">✖</button></td></tr>`).join('')}</table>`;
 }
 
 function devirDuzenle(type,i){
-  let x = devirData[type][i];
-  let yeni = prompt("Yeni tutarı girin", x.tutar);
+  let x=devirData[type][i];
+  let yeni=prompt('Yeni tutarı girin',x.tutar);
   if(yeni===null) return;
-  if(!confirm("Devir düzeltilecek, emin misiniz?")) return;
-  x.tutar = Number(yeni)||x.tutar;
-  x.tip = x.tutar>0?"Borç":x.tutar<0?"Alacak":"Sıfır";
+  if(!confirm('Devir düzeltilecek, emin misiniz?')) return;
+  x.tutar=Number(yeni)||x.tutar;
+  x.tip=x.tutar>0?'Borç':'Alacak';
   save();
 }
 
 function devirSil(type,i){
-  if(!confirm("Bu devri silmek için onay veriyor musunuz?")) return;
+  if(!confirm('Bu devri silmek için onay veriyor musunuz?')) return;
   devirData[type].splice(i,1);
   save();
 }
-(arr,type){
-  if(!arr.length) return "<p>Devir yok</p>";
-  return `<table><tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th></th></tr>${arr.map((x,i)=>`<tr><td><span class="icon ${icon(x.tutar)}"></span></td><td>${x.ad}</td><td>${x.tip}</td><td>${x.tutar}</td><td><button class="small" onclick="devirSil('${type}',${i})">✖</button></td></tr>`).join("")}</table>`;
-}
-
-function devirSil(type,i){if(confirm("Devir silinsin mi?")){devirData[type].splice(i,1);save();}}
 
 function render(){
   kurye.innerHTML=`
-    <input id="ka" placeholder="Kurye adı">
-    <input id="kp" type="number" placeholder="Paket">
-    <input id="ku" type="number" placeholder="Ücret">
-    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+    <input id=ka placeholder=\"Kurye adı\">
+    <input id=kp type=number placeholder=\"Paket\">
+    <input id=ku type=number placeholder=\"Ücret\">
+    <button onclick=\"ekle('kurye',ka.value,kp.value,ku.value)\">GÜNLÜK EKLE</button>
+    <select id=ko>${[...new Set(data.kurye.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join('')}</select>
+    <input id=kt type=number placeholder=\"Ödeme\">
+    <button class=warn onclick=\"odeme('kurye',ko.value,kt.value)\">ÖDEME</button>
     ${tablo('kurye')}
-    <h4>Kurye Devirleri</h4>
-    ${devirTable(devirData.kurye,'kurye')}
+    <div class=section><h4>Kurye Devirleri</h4>${devirTable(devirData.kurye,'kurye')}</div>
   `;
+
   isletme.innerHTML=`
-    <input id="ia" placeholder="İşletme adı">
-    <input id="ip" type="number" placeholder="Paket">
-    <input id="iu" type="number" placeholder="Ücret">
-    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+    <input id=ia placeholder=\"İşletme adı\">
+    <input id=ip type=number placeholder=\"Paket\">
+    <input id=iu type=number placeholder=\"Ücret\">
+    <button onclick=\"ekle('isletme',ia.value,ip.value,iu.value)\">GÜNLÜK EKLE</button>
+    <select id=io>${[...new Set(data.isletme.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join('')}</select>
+    <input id=it type=number placeholder=\"Ödeme\">
+    <button class=warn onclick=\"odeme('isletme',io.value,it.value)\">ÖDEME</button>
     ${tablo('isletme')}
-    <h4>İşletme Devirleri</h4>
-    ${devirTable(devirData.isletme,'isletme')}
+    <div class=section><h4>İşletme Devirleri</h4>${devirTable(devirData.isletme,'isletme')}</div>
   `;
-  devirKurye.innerHTML=devirTable(devirData.kurye,'kurye');
-  devirIsletme.innerHTML=devirTable(devirData.isletme,'isletme');
 }
+
 render();
 </script></body>
 </html>
