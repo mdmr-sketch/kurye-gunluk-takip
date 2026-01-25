@@ -22,11 +22,11 @@ input,select,button{
   border-radius:6px;border:none;
   background:#334155;color:#fff;font-size:13px
 }
-
 button{background:#3b82f6;font-weight:bold}
 button.warn{background:#facc15;color:#000}
+button.small{font-size:10px;padding:3px 5px;background:#475569}
 
-table{width:100%;font-size:11px;border-collapse:collapse;margin-top:10px}
+table{width:100%;font-size:11px;border-collapse:collapse;margin-top:8px}
 th,td{border-bottom:1px solid #334155;padding:5px;text-align:center}
 
 .icon{width:8px;height:8px;border-radius:50%;display:inline-block}
@@ -34,7 +34,7 @@ th,td{border-bottom:1px solid #334155;padding:5px;text-align:center}
 .blue{background:#3b82f6}
 .green{background:#22c55e}
 
-.actions button{font-size:10px;padding:3px 5px;background:#475569}
+.actions button{margin:0 2px}
 .hidden{display:none}
 .section{margin-top:12px;padding-top:8px;border-top:1px solid #334155}
 </style>
@@ -61,6 +61,8 @@ let lastInput=JSON.parse(localStorage.getItem('lastInput'))||{
   kurye:{paket:'',ucret:''},
   isletme:{paket:'',ucret:''}
 };
+let editIndex=null;
+let editType=null;
 
 function save(){
   localStorage.setItem('takip',JSON.stringify(data));
@@ -87,13 +89,22 @@ function ekle(type,ad,paket,ucret){
 
   lastInput[type]={paket,ucret};
 
-  data[type].push({
-    ad,paket,
-    tutar:paket*ucret,
-    tip:'gunluk',
-    gun:today
-  });
+  let tutar=paket*ucret;
+
+  if(editIndex!==null){
+    Object.assign(data[type][editIndex],{ad,paket,tutar});
+    editIndex=null; editType=null;
+  }else{
+    data[type].push({ad,paket,tutar,tip:'gunluk',gun:today});
+  }
   save();
+}
+
+function duzenle(type,i){
+  editIndex=i; editType=type;
+  let x=data[type][i];
+  if(type==='kurye'){ka.value=x.ad;kp.value=x.paket;ku.value=x.tutar/x.paket;}
+  if(type==='isletme'){ia.value=x.ad;ip.value=x.paket;iu.value=x.tutar/x.paket;}
 }
 
 function odeme(type,ad,tutar){
@@ -114,22 +125,28 @@ function gunSonu(){
     let map={};
     data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
     Object.entries(map).forEach(([ad,tutar])=>{
-      if(tutar!==0) devirData[type].push({
-        ad,tutar,tip:tutar>0?'Borç':'Alacak'
-      });
+      if(tutar!==0) devirData[type].push({ad,tutar,tip:tutar>0?'Borç':'Alacak'});
     });
     data[type]=[];
   });
   save();
 }
 
-function excel(){
-  let wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),'Gunluk_Kurye');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),'Gunluk_Isletme');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.kurye),'Devir_Kurye');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.isletme),'Devir_Isletme');
-  XLSX.writeFile(wb,'Kurye_Takip.xlsx');
+function devirDuzenle(type,i){
+  let x=devirData[type][i];
+  let yeni=prompt('Yeni tutar',x.tutar);
+  if(yeni===null) return;
+  if(!confirm('Devir güncellenecek, emin misiniz?')) return;
+  x.tutar=Number(yeni)||x.tutar;
+  x.tip=x.tutar>0?'Borç':'Alacak';
+  save();
+}
+
+function devirSil(type,i){
+  if(confirm('Devri silmek istiyor musunuz?')){
+    devirData[type].splice(i,1);
+    save();
+  }
 }
 
 function tablo(type){
@@ -141,20 +158,27 @@ function tablo(type){
       <td>${x.ad}</td>
       <td>${x.paket}</td>
       <td>${x.tutar}</td>
-      <td class="actions"><button onclick="sil('${type}',${i})">✖</button></td>
+      <td class="actions">
+        ${x.tip==='gunluk'?`<button class="small" onclick="duzenle('${type}',${i})">✏️</button>`:''}
+        <button class="small" onclick="sil('${type}',${i})">✖</button>
+      </td>
     </tr>`).join('')}
   </table>`;
 }
 
-function devirTable(arr){
+function devirTable(arr,type){
   if(!arr.length) return '<p>Devir yok</p>';
   return `<table>
-  ${arr.map(x=>`
+  ${arr.map((x,i)=>`
     <tr>
       <td><span class="icon ${icon(x.tutar)}"></span></td>
       <td>${x.ad}</td>
       <td>${x.tip}</td>
       <td>${x.tutar}</td>
+      <td class="actions">
+        <button class="small" onclick="devirDuzenle('${type}',${i})">✏️</button>
+        <button class="small" onclick="devirSil('${type}',${i})">✖</button>
+      </td>
     </tr>`).join('')}
   </table>`;
 }
@@ -171,7 +195,7 @@ function render(){
     <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
 
     ${tablo('kurye')}
-    <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye)}</div>
+    <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye,'kurye')}</div>
   `;
 
   isletme.innerHTML=`
@@ -185,7 +209,7 @@ function render(){
     <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
 
     ${tablo('isletme')}
-    <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme)}</div>
+    <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme,'isletme')}</div>
   `;
 }
 
