@@ -3,29 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye & İşletme Takip</title>
+<title>Kurye Takip</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
-.tabbar{display:flex;gap:5px;margin-bottom:10px}
-.tabbar button{flex:1;padding:10px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+.tabbar{display:flex;gap:6px;margin-bottom:10px}
+.tabbar button{flex:1;padding:8px;border:none;border-radius:6px;font-weight:bold}
 .active{background:#2563eb;color:#fff}
 .passive{background:#334155;color:#94a3b8}
-input,select,button{width:100%;padding:8px;margin:4px 0;border-radius:6px;border:none}
-input,select{background:#334155;color:#fff}
-button{background:#3b82f6;color:#fff;font-weight:bold;cursor:pointer}
+
+input,select,button{
+  width:100%;padding:8px;margin:4px 0;
+  border-radius:6px;border:none;
+  background:#334155;color:#fff;font-size:13px
+}
+
+button{background:#3b82f6;font-weight:bold}
 button.warn{background:#facc15;color:#000}
-button.small{padding:4px;font-size:11px}
-table{width:100%;font-size:12px;border-collapse:collapse;margin-top:10px}
-th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
-.icon{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+table{width:100%;font-size:11px;border-collapse:collapse;margin-top:10px}
+th,td{border-bottom:1px solid #334155;padding:5px;text-align:center}
+
+.icon{width:8px;height:8px;border-radius:50%;display:inline-block}
 .red{background:#ef4444}
 .blue{background:#3b82f6}
 .green{background:#22c55e}
-.actions button{padding:2px 6px;font-size:11px;margin:0 2px;background:#475569}
+
+.actions button{font-size:10px;padding:3px 5px;background:#475569}
 .hidden{display:none}
-.section{margin-top:15px;padding-top:10px;border-top:1px solid #334155}
+.section{margin-top:12px;padding-top:8px;border-top:1px solid #334155}
 </style>
 </head>
 
@@ -40,24 +51,21 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 <div id="isletme" class="hidden"></div>
 
 <button class="warn" onclick="gunSonu()">GÜN SONU AL</button>
-<button onclick="excel()">EXCEL AKTAR</button>
+<button onclick="excel()">EXCEL</button>
 
 <script>
-let today = new Date().toLocaleDateString();
-let data = JSON.parse(localStorage.getItem('takip')) || { kurye:[], isletme:[] };
-let devirData = JSON.parse(localStorage.getItem('devir')) || { kurye:[], isletme:[] };
-let editIndex = null;
-
-// 🔒 SON GİRİLEN PAKET / ÜCRET HAFIZASI
-let lastInput = JSON.parse(localStorage.getItem('lastInput')) || {
-  kurye:{ paket:'', ucret:'' },
-  isletme:{ paket:'', ucret:'' }
+let today=new Date().toLocaleDateString();
+let data=JSON.parse(localStorage.getItem('takip'))||{kurye:[],isletme:[]};
+let devirData=JSON.parse(localStorage.getItem('devir'))||{kurye:[],isletme:[]};
+let lastInput=JSON.parse(localStorage.getItem('lastInput'))||{
+  kurye:{paket:'',ucret:''},
+  isletme:{paket:'',ucret:''}
 };
 
 function save(){
-  localStorage.setItem('takip', JSON.stringify(data));
-  localStorage.setItem('devir', JSON.stringify(devirData));
-  localStorage.setItem('lastInput', JSON.stringify(lastInput));
+  localStorage.setItem('takip',JSON.stringify(data));
+  localStorage.setItem('devir',JSON.stringify(devirData));
+  localStorage.setItem('lastInput',JSON.stringify(lastInput));
   render();
 }
 
@@ -67,29 +75,30 @@ function tab(x){
   tKurye.className='passive';
   tIsletme.className='passive';
   document.getElementById(x).classList.remove('hidden');
-  document.getElementById('t'+x.charAt(0).toUpperCase()+x.slice(1)).className='active';
+  document.getElementById('t'+x[0].toUpperCase()+x.slice(1)).className='active';
 }
 
-function icon(t){ return t>0?'red':t<0?'blue':'green'; }
+function icon(t){return t>0?'red':t<0?'blue':'green';}
 
-function ekle(type, ad, paket, ucret){
+function ekle(type,ad,paket,ucret){
   if(!ad) return alert('İsim girin');
+  paket=Number(paket)||0;
+  ucret=Number(ucret)||0;
 
-  paket = Number(paket)||0;
-  ucret = Number(ucret)||0;
+  lastInput[type]={paket,ucret};
 
-  // ✅ DEĞERLERİ KORU
-  lastInput[type] = { paket, ucret };
-
-  let tutar = paket * ucret;
-  data[type].push({ ad, paket, tutar, tip:'gunluk', gun:today });
+  data[type].push({
+    ad,paket,
+    tutar:paket*ucret,
+    tip:'gunluk',
+    gun:today
+  });
   save();
 }
 
-function odeme(type, ad, tutar){
+function odeme(type,ad,tutar){
   if(!ad) return alert('İsim seçin');
-  tutar = Number(tutar)||0;
-  data[type].push({ ad, paket:0, tutar:-tutar, tip:'odeme', gun:today });
+  data[type].push({ad,paket:0,tutar:-Number(tutar||0),tip:'odeme',gun:today});
   save();
 }
 
@@ -102,16 +111,12 @@ function sil(type,i){
 
 function gunSonu(){
   ['kurye','isletme'].forEach(type=>{
-    let map = {};
-    data[type].forEach(x=> map[x.ad]=(map[x.ad]||0)+x.tutar );
-    Object.entries(map).forEach(([ad,toplam])=>{
-      if(toplam!==0){
-        devirData[type].push({
-          ad,
-          tutar:toplam,
-          tip: toplam>0?'Borç':'Alacak'
-        });
-      }
+    let map={};
+    data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
+    Object.entries(map).forEach(([ad,tutar])=>{
+      if(tutar!==0) devirData[type].push({
+        ad,tutar,tip:tutar>0?'Borç':'Alacak'
+      });
     });
     data[type]=[];
   });
@@ -119,65 +124,43 @@ function gunSonu(){
 }
 
 function excel(){
-  let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.kurye),'Gunluk_Kurye');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.isletme),'Gunluk_Isletme');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(devirData.kurye),'Devir_Kurye');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(devirData.isletme),'Devir_Isletme');
+  let wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),'Gunluk_Kurye');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),'Gunluk_Isletme');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.kurye),'Devir_Kurye');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirData.isletme),'Devir_Isletme');
   XLSX.writeFile(wb,'Kurye_Takip.xlsx');
 }
 
 function tablo(type){
   return `<table>
-  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th>Tip</th><th></th></tr>
+  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
   ${data[type].map((x,i)=>`
     <tr>
       <td><span class="icon ${icon(x.tutar)}"></span></td>
       <td>${x.ad}</td>
       <td>${x.paket}</td>
       <td>${x.tutar}</td>
-      <td>${x.tip}</td>
       <td class="actions"><button onclick="sil('${type}',${i})">✖</button></td>
     </tr>`).join('')}
   </table>`;
 }
 
-function devirTable(arr,type){
+function devirTable(arr){
   if(!arr.length) return '<p>Devir yok</p>';
   return `<table>
-  <tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th></th></tr>
-  ${arr.map((x,i)=>`
+  ${arr.map(x=>`
     <tr>
       <td><span class="icon ${icon(x.tutar)}"></span></td>
       <td>${x.ad}</td>
       <td>${x.tip}</td>
       <td>${x.tutar}</td>
-      <td class="actions">
-        <button class="small" onclick="devirDuzenle('${type}',${i})">✏️</button>
-        <button class="small" onclick="devirSil('${type}',${i})">✖</button>
-      </td>
     </tr>`).join('')}
   </table>`;
 }
 
-function devirDuzenle(type,i){
-  let x = devirData[type][i];
-  let yeni = prompt('Yeni tutar', x.tutar);
-  if(yeni===null) return;
-  if(!confirm('Devir düzeltilecek, emin misiniz?')) return;
-  x.tutar = Number(yeni)||x.tutar;
-  x.tip = x.tutar>0?'Borç':'Alacak';
-  save();
-}
-
-function devirSil(type,i){
-  if(!confirm('Bu devri silmek istiyor musunuz?')) return;
-  devirData[type].splice(i,1);
-  save();
-}
-
 function render(){
-  kurye.innerHTML = `
+  kurye.innerHTML=`
     <input id="ka" placeholder="Kurye adı">
     <input id="kp" type="number" placeholder="Paket" value="${lastInput.kurye.paket}">
     <input id="ku" type="number" placeholder="Ücret" value="${lastInput.kurye.ucret}">
@@ -188,10 +171,10 @@ function render(){
     <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
 
     ${tablo('kurye')}
-    <div class="section"><h4>Kurye Devirleri</h4>${devirTable(devirData.kurye,'kurye')}</div>
+    <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye)}</div>
   `;
 
-  isletme.innerHTML = `
+  isletme.innerHTML=`
     <input id="ia" placeholder="İşletme adı">
     <input id="ip" type="number" placeholder="Paket" value="${lastInput.isletme.paket}">
     <input id="iu" type="number" placeholder="Ücret" value="${lastInput.isletme.ucret}">
@@ -202,11 +185,15 @@ function render(){
     <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
 
     ${tablo('isletme')}
-    <div class="section"><h4>İşletme Devirleri</h4>${devirTable(devirData.isletme,'isletme')}</div>
+    <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme)}</div>
   `;
 }
 
 render();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
 </script>
 </body>
 </html>
