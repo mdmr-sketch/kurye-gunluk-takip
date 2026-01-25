@@ -5,219 +5,214 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye Takip</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
-body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
-.tabbar{display:flex;gap:6px;margin-bottom:10px}
-.tabbar button{flex:1;padding:8px;border:none;border-radius:6px;font-weight:bold}
-.active{background:#2563eb;color:#fff}
-.passive{background:#334155;color:#94a3b8}
-
-input,select,button{
-  width:100%;padding:8px;margin:4px 0;
-  border-radius:6px;border:none;
-  background:#334155;color:#fff;font-size:13px
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f6fa;
+  color: #1f2937;
+  padding-bottom: 70px;
 }
-button{background:#3b82f6;font-weight:bold}
-button.warn{background:#facc15;color:#000}
-button.small{font-size:10px;padding:3px 5px;background:#475569}
 
-table{width:100%;font-size:11px;border-collapse:collapse;margin-top:8px}
-th,td{border-bottom:1px solid #334155;padding:5px;text-align:center}
+header {
+  background: #4f46e5;
+  color: white;
+  padding: 14px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
 
-.icon{width:8px;height:8px;border-radius:50%;display:inline-block}
-.red{background:#ef4444}
-.blue{background:#3b82f6}
-.green{background:#22c55e}
+.container {
+  padding: 12px;
+}
 
-.actions button{margin:0 2px}
-.hidden{display:none}
-.section{margin-top:12px;padding-top:8px;border-top:1px solid #334155}
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4f46e5;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.badge-gunluk {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badge-devir {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+}
+
+.bottom-nav div {
+  font-size: 12px;
+  color: #4f46e5;
+  text-align: center;
+}
 </style>
 </head>
 
 <body>
 
-<div class="tabbar">
-  <button id="tKurye" class="active" onclick="tab('kurye')">KURYELER</button>
-  <button id="tIsletme" class="passive" onclick="tab('isletme')">İŞLETMELER</button>
+<header>
+  Kurye Takip Sistemi
+</header>
+
+<div class="container">
+
+  <!-- GÜNLÜK -->
+  <div class="card">
+    <h3><span class="badge badge-gunluk">Günlük</span></h3>
+
+    <input id="kurye" placeholder="Kurye adı">
+    <input id="paket" type="number" placeholder="Paket adeti">
+    <input id="tutar" type="number" placeholder="Paket tutarı">
+
+    <button class="btn btn-primary" onclick="ekle()">Ekle</button>
+  </div>
+
+  <!-- LİSTE -->
+  <div class="card">
+    <h3>Günlük Kayıtlar</h3>
+    <div id="liste"></div>
+  </div>
+
+  <!-- DEVİR -->
+  <div class="card">
+    <h3><span class="badge badge-devir">Devir</span></h3>
+    <div id="devir"></div>
+  </div>
+
 </div>
 
-<div id="kurye"></div>
-<div id="isletme" class="hidden"></div>
-
-<button class="warn" onclick="gunSonu()">GÜN SONU AL</button>
-<button onclick="excel()">EXCEL</button>
+<div class="bottom-nav">
+  <div><i class="fa-solid fa-house"></i><br>Günlük</div>
+  <div><i class="fa-solid fa-plus"></i><br>Ekle</div>
+  <div><i class="fa-solid fa-box"></i><br>Devir</div>
+</div>
 
 <script>
-let today=new Date().toLocaleDateString();
-let data=JSON.parse(localStorage.getItem('takip'))||{kurye:[],isletme:[]};
-let devirData=JSON.parse(localStorage.getItem('devir'))||{kurye:[],isletme:[]};
-let lastInput=JSON.parse(localStorage.getItem('lastInput'))||{
-  kurye:{paket:'',ucret:''},
-  isletme:{paket:'',ucret:''}
-};
-let editIndex=null;
-let editType=null;
+let kayitlar = JSON.parse(localStorage.getItem("kayitlar")) || [];
 
-function save(){
-  localStorage.setItem('takip',JSON.stringify(data));
-  localStorage.setItem('devir',JSON.stringify(devirData));
-  localStorage.setItem('lastInput',JSON.stringify(lastInput));
-  render();
+function ekle() {
+  const kurye = document.getElementById("kurye").value;
+  const paket = document.getElementById("paket").value;
+  const tutar = document.getElementById("tutar").value;
+
+  if (!kurye || !paket || !tutar) return;
+
+  kayitlar.push({ kurye, paket, tutar });
+  localStorage.setItem("kayitlar", JSON.stringify(kayitlar));
+
+  // sadece kurye sıfırlansın
+  document.getElementById("kurye").value = "";
+
+  goster();
 }
 
-function tab(x){
-  kurye.classList.add('hidden');
-  isletme.classList.add('hidden');
-  tKurye.className='passive';
-  tIsletme.className='passive';
-  document.getElementById(x).classList.remove('hidden');
-  document.getElementById('t'+x[0].toUpperCase()+x.slice(1)).className='active';
+function sil(index) {
+  kayitlar.splice(index, 1);
+  localStorage.setItem("kayitlar", JSON.stringify(kayitlar));
+  goster();
 }
 
-function icon(t){return t>0?'red':t<0?'blue':'green';}
+function goster() {
+  const liste = document.getElementById("liste");
+  const devir = document.getElementById("devir");
 
-function ekle(type,ad,paket,ucret){
-  if(!ad) return alert('İsim girin');
-  paket=Number(paket)||0;
-  ucret=Number(ucret)||0;
+  liste.innerHTML = "";
+  devir.innerHTML = "";
 
-  lastInput[type]={paket,ucret};
+  let toplam = {};
 
-  let tutar=paket*ucret;
+  kayitlar.forEach((k, i) => {
+    liste.innerHTML += `
+      <div class="list-item">
+        ${k.kurye} - ${k.paket} paket / ${k.tutar} ₺
+        <button class="btn btn-danger" onclick="sil(${i})">X</button>
+      </div>
+    `;
 
-  if(editIndex!==null){
-    Object.assign(data[type][editIndex],{ad,paket,tutar});
-    editIndex=null; editType=null;
-  }else{
-    data[type].push({ad,paket,tutar,tip:'gunluk',gun:today});
-  }
-  save();
-}
-
-function duzenle(type,i){
-  editIndex=i; editType=type;
-  let x=data[type][i];
-  if(type==='kurye'){ka.value=x.ad;kp.value=x.paket;ku.value=x.tutar/x.paket;}
-  if(type==='isletme'){ia.value=x.ad;ip.value=x.paket;iu.value=x.tutar/x.paket;}
-}
-
-function odeme(type,ad,tutar){
-  if(!ad) return alert('İsim seçin');
-  data[type].push({ad,paket:0,tutar:-Number(tutar||0),tip:'odeme',gun:today});
-  save();
-}
-
-function sil(type,i){
-  if(confirm('Silinsin mi?')){
-    data[type].splice(i,1);
-    save();
-  }
-}
-
-function gunSonu(){
-  ['kurye','isletme'].forEach(type=>{
-    let map={};
-    data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
-    Object.entries(map).forEach(([ad,tutar])=>{
-      if(tutar!==0) devirData[type].push({ad,tutar,tip:tutar>0?'Borç':'Alacak'});
-    });
-    data[type]=[];
+    toplam[k.kurye] = (toplam[k.kurye] || 0) + Number(k.tutar);
   });
-  save();
+
+  Object.keys(toplam).forEach(k => {
+    if (toplam[k] > 0) {
+      devir.innerHTML += `
+        <div class="list-item">
+          ${k} → ${toplam[k]} ₺
+        </div>
+      `;
+    }
+  });
 }
 
-function devirDuzenle(type,i){
-  let x=devirData[type][i];
-  let yeni=prompt('Yeni tutar',x.tutar);
-  if(yeni===null) return;
-  if(!confirm('Devir güncellenecek, emin misiniz?')) return;
-  x.tutar=Number(yeni)||x.tutar;
-  x.tip=x.tutar>0?'Borç':'Alacak';
-  save();
-}
-
-function devirSil(type,i){
-  if(confirm('Devri silmek istiyor musunuz?')){
-    devirData[type].splice(i,1);
-    save();
-  }
-}
-
-function tablo(type){
-  return `<table>
-  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
-  ${data[type].map((x,i)=>`
-    <tr>
-      <td><span class="icon ${icon(x.tutar)}"></span></td>
-      <td>${x.ad}</td>
-      <td>${x.paket}</td>
-      <td>${x.tutar}</td>
-      <td class="actions">
-        ${x.tip==='gunluk'?`<button class="small" onclick="duzenle('${type}',${i})">✏️</button>`:''}
-        <button class="small" onclick="sil('${type}',${i})">✖</button>
-      </td>
-    </tr>`).join('')}
-  </table>`;
-}
-
-function devirTable(arr,type){
-  if(!arr.length) return '<p>Devir yok</p>';
-  return `<table>
-  ${arr.map((x,i)=>`
-    <tr>
-      <td><span class="icon ${icon(x.tutar)}"></span></td>
-      <td>${x.ad}</td>
-      <td>${x.tip}</td>
-      <td>${x.tutar}</td>
-      <td class="actions">
-        <button class="small" onclick="devirDuzenle('${type}',${i})">✏️</button>
-        <button class="small" onclick="devirSil('${type}',${i})">✖</button>
-      </td>
-    </tr>`).join('')}
-  </table>`;
-}
-
-function render(){
-  kurye.innerHTML=`
-    <input id="ka" placeholder="Kurye adı">
-    <input id="kp" type="number" placeholder="Paket" value="${lastInput.kurye.paket}">
-    <input id="ku" type="number" placeholder="Ücret" value="${lastInput.kurye.ucret}">
-    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
-
-    <select id="ko">${[...new Set(data.kurye.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join('')}</select>
-    <input id="kt" type="number" placeholder="Ödeme">
-    <button class="warn" onclick="odeme('kurye',ko.value,kt.value)">ÖDEME</button>
-
-    ${tablo('kurye')}
-    <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye,'kurye')}</div>
-  `;
-
-  isletme.innerHTML=`
-    <input id="ia" placeholder="İşletme adı">
-    <input id="ip" type="number" placeholder="Paket" value="${lastInput.isletme.paket}">
-    <input id="iu" type="number" placeholder="Ücret" value="${lastInput.isletme.ucret}">
-    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
-
-    <select id="io">${[...new Set(data.isletme.map(x=>x.ad))].map(x=>`<option>${x}</option>`).join('')}</select>
-    <input id="it" type="number" placeholder="Ödeme">
-    <button class="warn" onclick="odeme('isletme',io.value,it.value)">ÖDEME</button>
-
-    ${tablo('isletme')}
-    <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme,'isletme')}</div>
-  `;
-}
-
-render();
-
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
-}
+goster();
 </script>
+
 </body>
 </html>
