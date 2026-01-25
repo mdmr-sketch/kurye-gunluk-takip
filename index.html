@@ -32,9 +32,6 @@ th,td{border-bottom:1px solid #334155;padding:6px;text-align:center}
 </div><div id="kurye"></div>
 <div id="isletme" class="hidden"></div><button class="warn" onclick="gunSonu()">GÜN SONU AL</button> <button onclick="excel()">EXCEL AKTAR</button>
 
-<div id="devirSection" class="section">
-  <h3>DEVİR (Gün Sonu)</h3>
-  <div id="devirKurye"></div>
   <div id="devirIsletme"></div>
 </div><script>
 let today = new Date().toLocaleDateString();
@@ -106,14 +103,63 @@ function tablo(type){
 
 function devirTable(arr,type){
   if(!arr.length) return "<p>Devir yok</p>";
+  return `<table>
+    <tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th>İşlem</th></tr>
+    ${arr.map((x,i)=>`
+      <tr>
+        <td><span class="icon ${icon(x.tutar)}"></span></td>
+        <td>${x.ad}</td>
+        <td>${x.tip}</td>
+        <td>${x.tutar}</td>
+        <td class="actions">
+          <button onclick="devirDuzenle('${type}',${i})">✏️</button>
+          <button onclick="devirSil('${type}',${i})">✖</button>
+        </td>
+      </tr>`).join("")}
+  </table>`;
+}
+
+function devirDuzenle(type,i){
+  let x = devirData[type][i];
+  let yeni = prompt("Yeni tutarı girin", x.tutar);
+  if(yeni===null) return;
+  if(!confirm("Devir düzeltilecek, emin misiniz?")) return;
+  x.tutar = Number(yeni)||x.tutar;
+  x.tip = x.tutar>0?"Borç":x.tutar<0?"Alacak":"Sıfır";
+  save();
+}
+
+function devirSil(type,i){
+  if(!confirm("Bu devri silmek için onay veriyor musunuz?")) return;
+  devirData[type].splice(i,1);
+  save();
+}
+(arr,type){
+  if(!arr.length) return "<p>Devir yok</p>";
   return `<table><tr><th></th><th>Ad</th><th>Tip</th><th>Tutar</th><th></th></tr>${arr.map((x,i)=>`<tr><td><span class="icon ${icon(x.tutar)}"></span></td><td>${x.ad}</td><td>${x.tip}</td><td>${x.tutar}</td><td><button class="small" onclick="devirSil('${type}',${i})">✖</button></td></tr>`).join("")}</table>`;
 }
 
 function devirSil(type,i){if(confirm("Devir silinsin mi?")){devirData[type].splice(i,1);save();}}
 
 function render(){
-  kurye.innerHTML=`<input id="ka" placeholder="Kurye adı"><input id="kp" type="number" placeholder="Paket"><input id="ku" type="number" placeholder="Ücret"><button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>${tablo('kurye')}`;
-  isletme.innerHTML=`<input id="ia" placeholder="İşletme adı"><input id="ip" type="number" placeholder="Paket"><input id="iu" type="number" placeholder="Ücret"><button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>${tablo('isletme')}`;
+  kurye.innerHTML=`
+    <input id="ka" placeholder="Kurye adı">
+    <input id="kp" type="number" placeholder="Paket">
+    <input id="ku" type="number" placeholder="Ücret">
+    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+    ${tablo('kurye')}
+    <h4>Kurye Devirleri</h4>
+    ${devirTable(devirData.kurye,'kurye')}
+  `;
+  isletme.innerHTML=`
+    <input id="ia" placeholder="İşletme adı">
+    <input id="ip" type="number" placeholder="Paket">
+    <input id="iu" type="number" placeholder="Ücret">
+    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+    ${tablo('isletme')}
+    <h4>İşletme Devirleri</h4>
+    ${devirTable(devirData.isletme,'isletme')}
+  `;
   devirKurye.innerHTML=devirTable(devirData.kurye,'kurye');
   devirIsletme.innerHTML=devirTable(devirData.isletme,'isletme');
 }
