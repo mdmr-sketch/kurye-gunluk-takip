@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
-
 <style>
 :root{
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
@@ -35,7 +34,6 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 }
 </style>
 </head>
-
 <body>
 
 <div class="tabbar">
@@ -126,35 +124,54 @@ function gunSonu(){
  save()
 }
 
-/* ===== EXCEL – TEK TABLO, BOZULMAZ ===== */
+/* ====== EXCEL – TEK SATIR, NET TABLO ====== */
 function excelAktar(){
  let rows=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
  const q=v=>`"${v ?? ""}"`
 
- rows.push([
-  q("Tür"),
-  q("Kayıt Tipi"),
-  q("Tarih"),
-  q("Ad"),
-  q("Paket"),
-  q("Tutar")
- ])
+ rows.push([q("Tarih"),q("Tür"),q("İsim"),q("Günlük Paket"),q("Günlük Tutar"),q("Devir Tutarı"),q("Toplam")])
 
+ function satirOlustur(tur, ad, gunlukPaket, gunlukTutar, devirTutar){
+  rows.push([
+   q(tarih),
+   q(tur),
+   q(ad),
+   q(gunlukPaket),
+   q(gunlukTutar),
+   q(devirTutar),
+   q((gunlukTutar||0)+(devirTutar||0))
+  ])
+ }
+
+ // KURYE
+ let kuryeMap={}
  data.kurye.forEach(x=>{
-  rows.push([q("Kurye"),q("Günlük"),q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+  if(!kuryeMap[x.ad]) kuryeMap[x.ad]={paket:0,tutar:0}
+  kuryeMap[x.ad].paket+=x.paket
+  kuryeMap[x.ad].tutar+=x.tutar
+ })
+ Object.keys(kuryeMap).forEach(ad=>{
+  let dev=devir.kurye.find(d=>d.ad===ad)
+  satirOlustur("Kurye",ad,kuryeMap[ad].paket,kuryeMap[ad].tutar,dev?dev.tutar:0)
+ })
+ devir.kurye.forEach(d=>{
+  if(!kuryeMap[d.ad]) satirOlustur("Kurye",d.ad,0,0,d.tutar)
  })
 
- devir.kurye.forEach(x=>{
-  rows.push([q("Kurye"),q("Devir"),q(tarih),q(x.ad),q(""),q(x.tutar)])
- })
-
+ // İŞLETME
+ let isletmeMap={}
  data.isletme.forEach(x=>{
-  rows.push([q("İşletme"),q("Günlük"),q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+  if(!isletmeMap[x.ad]) isletmeMap[x.ad]={paket:0,tutar:0}
+  isletmeMap[x.ad].paket+=x.paket
+  isletmeMap[x.ad].tutar+=x.tutar
  })
-
- devir.isletme.forEach(x=>{
-  rows.push([q("İşletme"),q("Devir"),q(tarih),q(x.ad),q(""),q(x.tutar)])
+ Object.keys(isletmeMap).forEach(ad=>{
+  let dev=devir.isletme.find(d=>d.ad===ad)
+  satirOlustur("İşletme",ad,isletmeMap[ad].paket,isletmeMap[ad].tutar,dev?dev.tutar:0)
+ })
+ devir.isletme.forEach(d=>{
+  if(!isletmeMap[d.ad]) satirOlustur("İşletme",d.ad,0,0,d.tutar)
  })
 
  let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
