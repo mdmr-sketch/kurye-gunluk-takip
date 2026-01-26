@@ -41,14 +41,14 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  <button id="tIsletme" onclick="tab('isletme')">İŞLETMELER</button>
 </div>
 
+<!-- 🔹 SEKMEYE GÖRE TOPLAM -->
+<div class="card">
+  <b id="toplamBaslik">Kuryelere Ödenecek Toplam</b><br>
+  <span id="toplamTutar">0 ₺</span>
+</div>
+
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
-
-<!-- ✅ SADECE EKLENEN KISIM -->
-<div class="card">
-  <b>İşletmelerden Toplam Alacağım</b><br>
-  <span id="isletmeToplam">0 ₺</span>
-</div>
 
 <button onclick="gunSonu()">GÜN SONU AL</button>
 
@@ -68,8 +68,11 @@ function tab(x){
  isletme.classList.add("hidden")
  tKurye.classList.remove("active")
  tIsletme.classList.remove("active")
+
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+
+ toplamGuncelle(x)
 }
 
 function icon(v){
@@ -136,6 +139,18 @@ function gunSonu(){
  save()
 }
 
+/* ---- TOPLAM GÜNCELLE ---- */
+function toplamGuncelle(type){
+ let toplam = devir[type]
+   .filter(x=>x.tutar>0)
+   .reduce((s,x)=>s+x.tutar,0)
+
+ document.getElementById("toplamBaslik").innerText =
+   type==="kurye" ? "Kuryelere Ödenecek Toplam" : "İşletmelere Ödenecek Toplam"
+
+ document.getElementById("toplamTutar").innerText = toplam+" ₺"
+}
+
 /* ---- TABLOLAR ---- */
 function tabloGunluk(type){
  return `<table>
@@ -194,13 +209,7 @@ function render(){
  <b>Devir</b>${tabloDevir("isletme")}
  `
 
- /* ✅ SADECE İŞLETMELER TOPLAM ALACAK */
- let toplamIsletme = devir.isletme
-   .filter(x=>x.tutar>0)
-   .reduce((s,x)=>s+x.tutar,0)
-
- document.getElementById("isletmeToplam").innerText =
-   toplamIsletme + " ₺"
+ toplamGuncelle(document.querySelector(".active").id==="tKurye"?"kurye":"isletme")
 }
 
 render()
