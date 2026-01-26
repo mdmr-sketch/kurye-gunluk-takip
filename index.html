@@ -81,6 +81,7 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+ render() // sekme değiştiğinde de dropdown güncelleniyor
 }
 
 function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
@@ -134,15 +135,13 @@ function odemeGir(){
  let ad=document.getElementById("odemeAd").value
  let tutar=Number(document.getElementById("odemeTutar").value)
  if(!ad || !tutar) return alert("İsim ve tutar gir")
- // Günlük ve devirden düş
  data[tip].forEach(x=>{ if(x.ad===ad){ x.tutar-=tutar; if(x.tutar<0)x.tutar=0 } })
  devir[tip].forEach(x=>{ if(x.ad===ad){ x.tutar-=tutar; if(x.tutar<0)x.tutar=0 } })
- // Ödeme kaydı
  odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
  save()
 }
 
-// TABLO
+// TABLOLAR
 function tabloGunluk(type){
  return `<table>
  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
@@ -193,26 +192,32 @@ function tabloOdeme(){
 function excelAktar(){
  let rows=[]
  const q=v=>`"${v ?? ""}"`
+ let tarih=new Date().toLocaleDateString("tr-TR")
+
  rows.push([q("GÜNLÜK KURYELER")])
  rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
- let tarih=new Date().toLocaleDateString("tr-TR")
  data.kurye.forEach(x=>rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)]))
+
  rows.push([])
  rows.push([q("DEVİR KURYELER")])
  rows.push([q("Tarih"),q("Ad"),q("Tutar")])
  devir.kurye.forEach(x=>rows.push([q(tarih),q(x.ad),q(x.tutar)]))
+
  rows.push([])
  rows.push([q("GÜNLÜK İŞLETMELER")])
  rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
  data.isletme.forEach(x=>rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)]))
+
  rows.push([])
  rows.push([q("DEVİR İŞLETMELER")])
  rows.push([q("Tarih"),q("Ad"),q("Tutar")])
- devir.isletme.forEach(x=>rows.push([q(tarih),q(x.ad),q(x.tutar)]))
+ devir.isletme.forEach(x=>rows.push([q(tarih),q(x.ad),q(tutar)]))
+
  rows.push([])
  rows.push([q("ÖDEMELER")])
  rows.push([q("Tarih"),q("Tip"),q("Ad"),q("Tutar")])
  odemeler.forEach(o=>rows.push([q(o.tarih),q(o.tip),q(o.ad),q(o.tutar)]))
+
  let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
  let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
  let url=URL.createObjectURL(blob)
