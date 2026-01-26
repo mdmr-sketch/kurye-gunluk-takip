@@ -73,7 +73,6 @@ function icon(v){
  return "green"
 }
 
-/* ---- EKLE ---- */
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
  p=Number(p)||0; u=Number(u)||0
@@ -82,18 +81,12 @@ function ekle(type,ad,p,u){
  save()
 }
 
-/* ---- GÜNLÜK DÜZENLE / SİL ---- */
 function duzenleGunluk(type,i){
  let x=data[type][i]
- let ad=prompt("Ad",x.ad)
- if(ad===null) return
- let paket=prompt("Paket",x.paket)
- if(paket===null) return
- let tutar=prompt("Tutar",x.tutar)
- if(tutar===null) return
- x.ad=ad
- x.paket=Number(paket)
- x.tutar=Number(tutar)
+ let ad=prompt("Ad",x.ad); if(ad===null) return
+ let paket=prompt("Paket",x.paket); if(paket===null) return
+ let tutar=prompt("Tutar",x.tutar); if(tutar===null) return
+ x.ad=ad; x.paket=Number(paket); x.tutar=Number(tutar)
  save()
 }
 
@@ -103,15 +96,11 @@ function silGunluk(type,i){
  }
 }
 
-/* ---- DEVİR DÜZENLE / SİL ---- */
 function duzenleDevir(type,i){
  let x=devir[type][i]
- let ad=prompt("Ad",x.ad)
- if(ad===null) return
- let tutar=prompt("Tutar",x.tutar)
- if(tutar===null) return
- x.ad=ad
- x.tutar=Number(tutar)
+ let ad=prompt("Ad",x.ad); if(ad===null) return
+ let tutar=prompt("Tutar",x.tutar); if(tutar===null) return
+ x.ad=ad; x.tutar=Number(tutar)
  save()
 }
 
@@ -121,7 +110,6 @@ function silDevir(type,i){
  }
 }
 
-/* ---- GÜN SONU ---- */
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
   let map={}
@@ -136,7 +124,6 @@ function gunSonu(){
  save()
 }
 
-/* ---- TABLOLAR ---- */
 function tabloGunluk(type){
  return `<table>
  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
@@ -170,26 +157,31 @@ function tabloDevir(type){
  </table>`
 }
 
-/* ---- EXCEL (CSV) ---- */
+/* ---- DÜZENLİ EXCEL ---- */
 function excelAktar(){
- let rows=[]
- rows.push(["Tarih","Tip","Bölüm","Ad","Paket","Tutar"])
+ let r=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
 
- data.kurye.forEach(x=>{
-  rows.push([tarih,"Günlük","Kurye",x.ad,x.paket,x.tutar])
- })
- data.isletme.forEach(x=>{
-  rows.push([tarih,"Günlük","İşletme",x.ad,x.paket,x.tutar])
- })
- devir.kurye.forEach(x=>{
-  rows.push([tarih,"Devir","Kurye",x.ad,"",x.tutar])
- })
- devir.isletme.forEach(x=>{
-  rows.push([tarih,"Devir","İşletme",x.ad,"",x.tutar])
- })
+ function baslik(txt){ r.push([txt]); r.push([]) }
+ function kolon(){ r.push(["Ad","Paket","Tutar"]) }
 
- let csv=rows.map(r=>r.join(";")).join("\n")
+ baslik("KURYE - GÜNLÜK")
+ kolon()
+ data.kurye.forEach(x=>r.push([x.ad,x.paket,x.tutar]))
+
+ r.push([]); baslik("KURYE - DEVİR")
+ r.push(["Ad","Tutar"])
+ devir.kurye.forEach(x=>r.push([x.ad,x.tutar]))
+
+ r.push([]); baslik("İŞLETME - GÜNLÜK")
+ kolon()
+ data.isletme.forEach(x=>r.push([x.ad,x.paket,x.tutar]))
+
+ r.push([]); baslik("İŞLETME - DEVİR (İŞLETMELERİN BANA BORCU)")
+ r.push(["Ad","Tutar"])
+ devir.isletme.forEach(x=>r.push([x.ad,x.tutar]))
+
+ let csv=r.map(a=>a.join(";")).join("\n")
  let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
  let url=URL.createObjectURL(blob)
 
@@ -201,7 +193,6 @@ function excelAktar(){
  document.body.removeChild(a)
 }
 
-/* ---- RENDER ---- */
 function render(){
  kurye.innerHTML=`
  <div class="card">
