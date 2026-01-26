@@ -27,15 +27,10 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .green{background:var(--green)}
 .actions{display:flex;gap:6px;justify-content:center}
 .actions button{
- width:auto;padding:4px 6px;font-size:13px;background:#475569;
-}
-.total{
- background:#020617;
- padding:10px;
- border-radius:10px;
- margin-bottom:10px;
- text-align:center;
- font-weight:bold;
+ width:auto;
+ padding:4px 6px;
+ font-size:13px;
+ background:#475569;
 }
 </style>
 </head>
@@ -49,9 +44,8 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
-<div id="toplam"></div>
-
 <button onclick="gunSonu()">GÜN SONU AL</button>
+<button onclick="excelAktar()">EXCEL DIŞA AKTAR</button>
 
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
@@ -71,7 +65,6 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- renderToplam(x)
 }
 
 function icon(v){
@@ -80,6 +73,7 @@ function icon(v){
  return "green"
 }
 
+/* ---- EKLE ---- */
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
  p=Number(p)||0; u=Number(u)||0
@@ -88,12 +82,18 @@ function ekle(type,ad,p,u){
  save()
 }
 
+/* ---- GÜNLÜK DÜZENLE / SİL ---- */
 function duzenleGunluk(type,i){
  let x=data[type][i]
- let ad=prompt("Ad",x.ad); if(ad===null) return
- let paket=prompt("Paket",x.paket); if(paket===null) return
- let tutar=prompt("Tutar",x.tutar); if(tutar===null) return
- x.ad=ad; x.paket=Number(paket); x.tutar=Number(tutar)
+ let ad=prompt("Ad",x.ad)
+ if(ad===null) return
+ let paket=prompt("Paket",x.paket)
+ if(paket===null) return
+ let tutar=prompt("Tutar",x.tutar)
+ if(tutar===null) return
+ x.ad=ad
+ x.paket=Number(paket)
+ x.tutar=Number(tutar)
  save()
 }
 
@@ -103,11 +103,15 @@ function silGunluk(type,i){
  }
 }
 
+/* ---- DEVİR DÜZENLE / SİL ---- */
 function duzenleDevir(type,i){
  let x=devir[type][i]
- let ad=prompt("Ad",x.ad); if(ad===null) return
- let tutar=prompt("Tutar",x.tutar); if(tutar===null) return
- x.ad=ad; x.tutar=Number(tutar)
+ let ad=prompt("Ad",x.ad)
+ if(ad===null) return
+ let tutar=prompt("Tutar",x.tutar)
+ if(tutar===null) return
+ x.ad=ad
+ x.tutar=Number(tutar)
  save()
 }
 
@@ -117,6 +121,7 @@ function silDevir(type,i){
  }
 }
 
+/* ---- GÜN SONU ---- */
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
   let map={}
@@ -131,21 +136,7 @@ function gunSonu(){
  save()
 }
 
-function toplamHesapla(type){
- let g=data[type].reduce((a,b)=>a+b.tutar,0)
- let d=devir[type].reduce((a,b)=>a+b.tutar,0)
- return g+d
-}
-
-function renderToplam(type){
- let tutar=toplamHesapla(type)
- toplam.innerHTML=`
- <div class="total">
- ${type==="kurye" ? "Kuryelere Ödenecek Toplam" : "İşletmelerden Alınacak Toplam"}<br>
- ${tutar} ₺
- </div>`
-}
-
+/* ---- TABLOLAR ---- */
 function tabloGunluk(type){
  return `<table>
  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
@@ -179,6 +170,38 @@ function tabloDevir(type){
  </table>`
 }
 
+/* ---- EXCEL (CSV) ---- */
+function excelAktar(){
+ let rows=[]
+ rows.push(["Tarih","Tip","Bölüm","Ad","Paket","Tutar"])
+ let tarih=new Date().toLocaleDateString("tr-TR")
+
+ data.kurye.forEach(x=>{
+  rows.push([tarih,"Günlük","Kurye",x.ad,x.paket,x.tutar])
+ })
+ data.isletme.forEach(x=>{
+  rows.push([tarih,"Günlük","İşletme",x.ad,x.paket,x.tutar])
+ })
+ devir.kurye.forEach(x=>{
+  rows.push([tarih,"Devir","Kurye",x.ad,"",x.tutar])
+ })
+ devir.isletme.forEach(x=>{
+  rows.push([tarih,"Devir","İşletme",x.ad,"",x.tutar])
+ })
+
+ let csv=rows.map(r=>r.join(";")).join("\n")
+ let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
+ let url=URL.createObjectURL(blob)
+
+ let a=document.createElement("a")
+ a.href=url
+ a.download="kurye_isletme_"+tarih+".csv"
+ document.body.appendChild(a)
+ a.click()
+ document.body.removeChild(a)
+}
+
+/* ---- RENDER ---- */
 function render(){
  kurye.innerHTML=`
  <div class="card">
@@ -200,10 +223,7 @@ function render(){
  <b>Günlük</b>${tabloGunluk("isletme")}
  <b>Devir</b>${tabloDevir("isletme")}
  `
- let aktif=document.querySelector(".active").id==="tKurye"?"kurye":"isletme"
- renderToplam(aktif)
 }
-
 render()
 </script>
 </body>
