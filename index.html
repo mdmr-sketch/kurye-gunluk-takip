@@ -81,6 +81,34 @@ function ekle(type,ad,p,u){
  save()
 }
 
+// ---- ÖDEME GİR ----
+function odemeGir(type){
+ let ad=prompt(`${type==='kurye'?'Kurye':'İşletme'} adı:`)
+ if(!ad) return
+ let tutar=prompt("Ödeme tutarı girin")
+ if(!tutar) return
+ tutar=Number(tutar)
+
+ // Günlükten düş
+ data[type].forEach(x=>{
+  if(x.ad===ad){
+   if(x.tutar>=tutar) x.tutar -= tutar
+   else x.tutar=0
+  }
+ })
+
+ // Devirden düş
+ devir[type].forEach(x=>{
+  if(x.ad===ad){
+   if(x.tutar>=tutar) x.tutar -= tutar
+   else x.tutar=0
+  }
+ })
+
+ save()
+}
+
+// ---- GÜNLÜK DÜZENLE / SİL ----
 function duzenleGunluk(type,i){
  let x=data[type][i]
  let ad=prompt("Ad",x.ad); if(ad===null) return
@@ -96,6 +124,7 @@ function silGunluk(type,i){
  }
 }
 
+// ---- DEVİR DÜZENLE / SİL ----
 function duzenleDevir(type,i){
  let x=devir[type][i]
  let ad=prompt("Ad",x.ad); if(ad===null) return
@@ -124,67 +153,7 @@ function gunSonu(){
  save()
 }
 
-/* ====== EXCEL – TEK SATIR, NET TABLO ====== */
-function excelAktar(){
- let rows=[]
- let tarih=new Date().toLocaleDateString("tr-TR")
- const q=v=>`"${v ?? ""}"`
-
- rows.push([q("Tarih"),q("Tür"),q("İsim"),q("Günlük Paket"),q("Günlük Tutar"),q("Devir Tutarı"),q("Toplam")])
-
- function satirOlustur(tur, ad, gunlukPaket, gunlukTutar, devirTutar){
-  rows.push([
-   q(tarih),
-   q(tur),
-   q(ad),
-   q(gunlukPaket),
-   q(gunlukTutar),
-   q(devirTutar),
-   q((gunlukTutar||0)+(devirTutar||0))
-  ])
- }
-
- // KURYE
- let kuryeMap={}
- data.kurye.forEach(x=>{
-  if(!kuryeMap[x.ad]) kuryeMap[x.ad]={paket:0,tutar:0}
-  kuryeMap[x.ad].paket+=x.paket
-  kuryeMap[x.ad].tutar+=x.tutar
- })
- Object.keys(kuryeMap).forEach(ad=>{
-  let dev=devir.kurye.find(d=>d.ad===ad)
-  satirOlustur("Kurye",ad,kuryeMap[ad].paket,kuryeMap[ad].tutar,dev?dev.tutar:0)
- })
- devir.kurye.forEach(d=>{
-  if(!kuryeMap[d.ad]) satirOlustur("Kurye",d.ad,0,0,d.tutar)
- })
-
- // İŞLETME
- let isletmeMap={}
- data.isletme.forEach(x=>{
-  if(!isletmeMap[x.ad]) isletmeMap[x.ad]={paket:0,tutar:0}
-  isletmeMap[x.ad].paket+=x.paket
-  isletmeMap[x.ad].tutar+=x.tutar
- })
- Object.keys(isletmeMap).forEach(ad=>{
-  let dev=devir.isletme.find(d=>d.ad===ad)
-  satirOlustur("İşletme",ad,isletmeMap[ad].paket,isletmeMap[ad].tutar,dev?dev.tutar:0)
- })
- devir.isletme.forEach(d=>{
-  if(!isletmeMap[d.ad]) satirOlustur("İşletme",d.ad,0,0,d.tutar)
- })
-
- let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
- let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
- let url=URL.createObjectURL(blob)
- let a=document.createElement("a")
- a.href=url
- a.download="kurye_isletme_"+tarih+".csv"
- document.body.appendChild(a)
- a.click()
- document.body.removeChild(a)
-}
-
+// ---- TABLOLAR ----
 function tabloGunluk(type){
  return `<table>
  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
@@ -218,6 +187,51 @@ function tabloDevir(type){
  </table>`
 }
 
+// ---- EXCEL (CSV) ----
+function excelAktar(){
+ let rows=[]
+ let tarih=new Date().toLocaleDateString("tr-TR")
+ const q=v=>`"${v ?? ""}"`
+
+ rows.push([q("KURYE - GÜNLÜK")])
+ rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
+ data.kurye.forEach(x=>{
+  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+ })
+
+ rows.push([])
+ rows.push([q("KURYE - DEVİR")])
+ rows.push([q("Tarih"),q("Ad"),q("Tutar")])
+ devir.kurye.forEach(x=>{
+  rows.push([q(tarih),q(x.ad),q(x.tutar)])
+ })
+
+ rows.push([])
+ rows.push([q("İŞLETME - GÜNLÜK")])
+ rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
+ data.isletme.forEach(x=>{
+  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+ })
+
+ rows.push([])
+ rows.push([q("İŞLETME - DEVİR")])
+ rows.push([q("Tarih"),q("Ad"),q("Tutar")])
+ devir.isletme.forEach(x=>{
+  rows.push([q(tarih),q(x.ad),q(x.tutar)])
+ })
+
+ let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
+ let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
+ let url=URL.createObjectURL(blob)
+ let a=document.createElement("a")
+ a.href=url
+ a.download="kurye_isletme_"+tarih+".csv"
+ document.body.appendChild(a)
+ a.click()
+ document.body.removeChild(a)
+}
+
+// ---- RENDER ----
 function render(){
  kurye.innerHTML=`
  <div class="card">
@@ -225,6 +239,7 @@ function render(){
  <input type="number" placeholder="Paket" value="${last.kurye.p}" id="kp">
  <input type="number" placeholder="Ücret" value="${last.kurye.u}" id="ku">
  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+ <button onclick="odemeGir('kurye')">KURYE ÖDEME GİR</button>
  </div>
  <b>Günlük</b>${tabloGunluk("kurye")}
  <b>Devir</b>${tabloDevir("kurye")}
@@ -235,6 +250,7 @@ function render(){
  <input type="number" placeholder="Paket" value="${last.isletme.p}" id="ip">
  <input type="number" placeholder="Ücret" value="${last.isletme.u}" id="iu">
  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+ <button onclick="odemeGir('isletme')">İŞLETME ÖDEME GİR</button>
  </div>
  <b>Günlük</b>${tabloGunluk("isletme")}
  <b>Devir</b>${tabloDevir("isletme")}
@@ -242,5 +258,6 @@ function render(){
 }
 render()
 </script>
+
 </body>
 </html>
