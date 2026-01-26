@@ -50,11 +50,13 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
+let odemeler=JSON.parse(localStorage.getItem("odemeler"))||{kurye:[],isletme:[]}
 let last={kurye:{p:'',u:''},isletme:{p:'',u:''}}
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
  localStorage.setItem("devir",JSON.stringify(devir))
+ localStorage.setItem("odemeler",JSON.stringify(odemeler))
  render()
 }
 
@@ -88,6 +90,7 @@ function odemeGir(type){
  let tutar=prompt("Ödeme tutarı girin")
  if(!tutar) return
  tutar=Number(tutar)
+ odemeler[type].push({ad,tutar})
 
  // Günlükten düş
  data[type].forEach(x=>{
@@ -187,37 +190,45 @@ function tabloDevir(type){
  </table>`
 }
 
+// ---- ÖDEMELER TABLO ----
+function tabloOdemeler(type){
+ if(odemeler[type].length===0) return ""
+ return `<table>
+ <tr><th>Ad</th><th>Ödeme Tutarı</th></tr>
+ ${odemeler[type].map((x,i)=>`
+ <tr>
+ <td>${x.ad}</td>
+ <td>${x.tutar}</td>
+ </tr>`).join("")}
+ </table>`
+}
+
 // ---- EXCEL (CSV) ----
 function excelAktar(){
  let rows=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
  const q=v=>`"${v ?? ""}"`
 
- rows.push([q("KURYE - GÜNLÜK")])
- rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
- data.kurye.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
- })
+ ["kurye","isletme"].forEach(type=>{
+  rows.push([q(type.toUpperCase()+" - GÜNLÜK")])
+  rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
+  data[type].forEach(x=>{
+   rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+  })
 
- rows.push([])
- rows.push([q("KURYE - DEVİR")])
- rows.push([q("Tarih"),q("Ad"),q("Tutar")])
- devir.kurye.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.tutar)])
- })
+  rows.push([])
+  rows.push([q(type.toUpperCase()+" - DEVİR")])
+  rows.push([q("Tarih"),q("Ad"),q("Tutar")])
+  devir[type].forEach(x=>{
+   rows.push([q(tarih),q(x.ad),q(x.tutar)])
+  })
 
- rows.push([])
- rows.push([q("İŞLETME - GÜNLÜK")])
- rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
- data.isletme.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
- })
-
- rows.push([])
- rows.push([q("İŞLETME - DEVİR")])
- rows.push([q("Tarih"),q("Ad"),q("Tutar")])
- devir.isletme.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.tutar)])
+  rows.push([])
+  rows.push([q(type.toUpperCase()+" - ÖDEMELER")])
+  rows.push([q("Tarih"),q("Ad"),q("Ödeme")])
+  odemeler[type].forEach(x=>{
+   rows.push([q(tarih),q(x.ad),q(x.tutar)])
+  })
  })
 
  let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
@@ -243,6 +254,7 @@ function render(){
  </div>
  <b>Günlük</b>${tabloGunluk("kurye")}
  <b>Devir</b>${tabloDevir("kurye")}
+ <b>Ödemeler</b>${tabloOdemeler("kurye")}
  `
  isletme.innerHTML=`
  <div class="card">
@@ -254,6 +266,7 @@ function render(){
  </div>
  <b>Günlük</b>${tabloGunluk("isletme")}
  <b>Devir</b>${tabloDevir("isletme")}
+ <b>Ödemeler</b>${tabloOdemeler("isletme")}
  `
 }
 render()
