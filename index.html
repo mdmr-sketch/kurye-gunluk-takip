@@ -157,34 +157,41 @@ function tabloDevir(type){
  </table>`
 }
 
-/* ---- DÜZENLİ EXCEL ---- */
+/* ==== DÜZENLİ TABLO EXCEL ==== */
 function excelAktar(){
- let r=[]
+ let rows=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
 
- function baslik(txt){ r.push([txt]); r.push([]) }
- function kolon(){ r.push(["Ad","Paket","Tutar"]) }
+ rows.push(["KURYE - GÜNLÜK"])
+ rows.push(["Tarih","Ad","Paket","Tutar"])
+ data.kurye.forEach(x=>{
+  rows.push([tarih,x.ad,x.paket,x.tutar])
+ })
 
- baslik("KURYE - GÜNLÜK")
- kolon()
- data.kurye.forEach(x=>r.push([x.ad,x.paket,x.tutar]))
+ rows.push([])
+ rows.push(["KURYE - DEVİR"])
+ rows.push(["Tarih","Ad","Tutar"])
+ devir.kurye.forEach(x=>{
+  rows.push([tarih,x.ad,x.tutar])
+ })
 
- r.push([]); baslik("KURYE - DEVİR")
- r.push(["Ad","Tutar"])
- devir.kurye.forEach(x=>r.push([x.ad,x.tutar]))
+ rows.push([])
+ rows.push(["İŞLETME - GÜNLÜK"])
+ rows.push(["Tarih","Ad","Paket","Tutar"])
+ data.isletme.forEach(x=>{
+  rows.push([tarih,x.ad,x.paket,x.tutar])
+ })
 
- r.push([]); baslik("İŞLETME - GÜNLÜK")
- kolon()
- data.isletme.forEach(x=>r.push([x.ad,x.paket,x.tutar]))
+ rows.push([])
+ rows.push(["İŞLETME - DEVİR"])
+ rows.push(["Tarih","Ad","Tutar"])
+ devir.isletme.forEach(x=>{
+  rows.push([tarih,x.ad,x.tutar])
+ })
 
- r.push([]); baslik("İŞLETME - DEVİR (İŞLETMELERİN BANA BORCU)")
- r.push(["Ad","Tutar"])
- devir.isletme.forEach(x=>r.push([x.ad,x.tutar]))
-
- let csv=r.map(a=>a.join(";")).join("\n")
+ let csv=rows.map(r=>r.join(";")).join("\n")
  let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"})
  let url=URL.createObjectURL(blob)
-
  let a=document.createElement("a")
  a.href=url
  a.download="kurye_isletme_"+tarih+".csv"
