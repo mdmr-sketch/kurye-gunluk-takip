@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
+
 <style>
 :root{
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
@@ -34,6 +35,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 }
 </style>
 </head>
+
 <body>
 
 <div class="tabbar">
@@ -124,44 +126,35 @@ function gunSonu(){
  save()
 }
 
-/* ===== EXCEL – TABLO GİBİ, SÜTUNLAR SABİT ===== */
+/* ===== EXCEL – TEK TABLO, BOZULMAZ ===== */
 function excelAktar(){
  let rows=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
  const q=v=>`"${v ?? ""}"`
 
- // KURYE GÜNLÜK
- rows.push([q("KURYE GÜNLÜK"),"", "", ""])
- rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
+ rows.push([
+  q("Tür"),
+  q("Kayıt Tipi"),
+  q("Tarih"),
+  q("Ad"),
+  q("Paket"),
+  q("Tutar")
+ ])
+
  data.kurye.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+  rows.push([q("Kurye"),q("Günlük"),q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
  })
 
- rows.push(["","","",""])
-
- // KURYE DEVİR
- rows.push([q("KURYE DEVİR"),"", "", ""])
- rows.push([q("Tarih"),q("Ad"),"",q("Tutar")])
  devir.kurye.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),"",q(x.tutar)])
+  rows.push([q("Kurye"),q("Devir"),q(tarih),q(x.ad),q(""),q(x.tutar)])
  })
 
- rows.push(["","","",""])
-
- // İŞLETME GÜNLÜK
- rows.push([q("İŞLETME GÜNLÜK"),"", "", ""])
- rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
  data.isletme.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
+  rows.push([q("İşletme"),q("Günlük"),q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
  })
 
- rows.push(["","","",""])
-
- // İŞLETME DEVİR
- rows.push([q("İŞLETME DEVİR"),"", "", ""])
- rows.push([q("Tarih"),q("Ad"),"",q("Tutar")])
  devir.isletme.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),"",q(x.tutar)])
+  rows.push([q("İşletme"),q("Devir"),q(tarih),q(x.ad),q(""),q(x.tutar)])
  })
 
  let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
