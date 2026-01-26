@@ -124,37 +124,44 @@ function gunSonu(){
  save()
 }
 
-/* ====== EXCEL – SÜTUNLAR DÜZGÜN ====== */
+/* ===== EXCEL – TABLO GİBİ, SÜTUNLAR SABİT ===== */
 function excelAktar(){
  let rows=[]
  let tarih=new Date().toLocaleDateString("tr-TR")
  const q=v=>`"${v ?? ""}"`
 
- rows.push([q("KURYE - GÜNLÜK")])
+ // KURYE GÜNLÜK
+ rows.push([q("KURYE GÜNLÜK"),"", "", ""])
  rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
  data.kurye.forEach(x=>{
   rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
  })
 
- rows.push([])
- rows.push([q("KURYE - DEVİR")])
- rows.push([q("Tarih"),q("Ad"),q("Tutar")])
+ rows.push(["","","",""])
+
+ // KURYE DEVİR
+ rows.push([q("KURYE DEVİR"),"", "", ""])
+ rows.push([q("Tarih"),q("Ad"),"",q("Tutar")])
  devir.kurye.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.tutar)])
+  rows.push([q(tarih),q(x.ad),"",q(x.tutar)])
  })
 
- rows.push([])
- rows.push([q("İŞLETME - GÜNLÜK")])
+ rows.push(["","","",""])
+
+ // İŞLETME GÜNLÜK
+ rows.push([q("İŞLETME GÜNLÜK"),"", "", ""])
  rows.push([q("Tarih"),q("Ad"),q("Paket"),q("Tutar")])
  data.isletme.forEach(x=>{
   rows.push([q(tarih),q(x.ad),q(x.paket),q(x.tutar)])
  })
 
- rows.push([])
- rows.push([q("İŞLETME - DEVİR")])
- rows.push([q("Tarih"),q("Ad"),q("Tutar")])
+ rows.push(["","","",""])
+
+ // İŞLETME DEVİR
+ rows.push([q("İŞLETME DEVİR"),"", "", ""])
+ rows.push([q("Tarih"),q("Ad"),"",q("Tutar")])
  devir.isletme.forEach(x=>{
-  rows.push([q(tarih),q(x.ad),q(x.tutar)])
+  rows.push([q(tarih),q(x.ad),"",q(x.tutar)])
  })
 
  let csv="\uFEFF"+rows.map(r=>r.join(";")).join("\n")
