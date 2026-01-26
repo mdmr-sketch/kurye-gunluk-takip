@@ -19,7 +19,7 @@ body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
 .passive{background:var(--soft);color:#94a3b8}
 .card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px}
 .summary{display:flex;gap:8px;margin:10px 0}
-.summary .box{flex:1;background:var(--card);padding:10px;border-radius:10px;font-size:14px;text-align:center}
+.summary .box{flex:1;background:var(--card);padding:10px;border-radius:10px;text-align:center}
 .summary .kurye{border-left:4px solid var(--blue)}
 .summary .isletme{border-left:4px solid var(--red)}
 
@@ -28,7 +28,7 @@ input,select{background:var(--soft);color:#fff}
 button{background:var(--blue);color:#fff;font-weight:bold}
 button.warn{background:var(--yellow);color:#000}
 button.small{padding:4px;font-size:11px}
-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;table-layout:fixed}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .icon{width:8px;height:8px;border-radius:50%;display:inline-block}
 .red{background:var(--red)} .blue{background:var(--blue)} .green{background:var(--green)}
@@ -48,7 +48,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
-<!-- 🔢 ÖZET ALANI -->
+<!-- ÖZET -->
 <div class="summary">
   <div class="box kurye">
     <b>Kuryelere Toplam Ödeme</b><br>
@@ -102,8 +102,8 @@ function gunSonu(){
   data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
   Object.entries(map).forEach(([ad,toplam])=>{
     if(toplam===0) return;
-    let m=devirData[type].find(d=>d.ad===ad);
-    if(m) m.tutar+=toplam;
+    let d=devirData[type].find(x=>x.ad===ad);
+    if(d) d.tutar+=toplam;
     else devirData[type].push({ad,tutar:toplam});
   });
   data[type]=[];
@@ -132,6 +132,18 @@ function tablo(type){
  </table>`;
 }
 
+function devirTable(arr){
+ if(!arr.length) return '<p>Devir yok</p>';
+ return `<table>
+ <tr><th></th><th>Ad</th><th>Tutar</th></tr>
+ ${arr.map(x=>`
+ <tr>
+  <td><span class="icon ${icon(x.tutar)}"></span></td>
+  <td>${x.ad}</td><td>${x.tutar}</td>
+ </tr>`).join('')}
+ </table>`;
+}
+
 function render(){
   kurye.innerHTML=`
     <div class="card">
@@ -141,6 +153,7 @@ function render(){
       <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
     </div>
     ${tablo('kurye')}
+    <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye)}</div>
   `;
 
   isletme.innerHTML=`
@@ -151,6 +164,7 @@ function render(){
       <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
     </div>
     ${tablo('isletme')}
+    <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme)}</div>
   `;
 
   document.getElementById('kuryeToplam').innerText =
