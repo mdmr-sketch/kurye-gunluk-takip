@@ -71,17 +71,11 @@ function tab(x){
 function icon(t){return t>0?'red':t<0?'blue':'green'}
 
 function ekle(type,ad,paket,ucret){
-  lastValues[type]={paket,ucret};
   if(!ad) return alert('İsim girin');
-  paket=Number(paket)||0; ucret=Number(ucret)||0;
-  data[type].push({ad,paket,tutar:paket*ucret});
-  save();
-}
-
-function odeme(type,ad,tutar){
-  if(!ad) return alert('Seçim yapın');
-  tutar=Number(tutar)||0;
-  data[type].push({ad,paket:0,tutar:-tutar});
+  paket=Number(paket)||0;
+  ucret=Number(ucret)||0;
+  lastValues[type]={paket,ucret};
+  data[type].push({ad:String(ad),paket,tutar:paket*ucret});
   save();
 }
 
@@ -95,11 +89,13 @@ function sil(type,i){
 function gunSonu(){
  ['kurye','isletme'].forEach(type=>{
   let map={};
-  data[type].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
+  data[type].forEach(x=>{
+    map[x.ad]=(map[x.ad]||0)+x.tutar;
+  });
   Object.entries(map).forEach(([ad,toplam])=>{
     if(toplam===0) return;
-    let m=devirData[type].find(d=>d.ad===ad);
-    if(m) m.tutar+=toplam;
+    let d=devirData[type].find(x=>x.ad===ad);
+    if(d) d.tutar+=toplam;
     else devirData[type].push({ad,tutar:toplam});
   });
   data[type]=[];
@@ -121,15 +117,15 @@ function tablo(type,search){
  <tr><th></th><th>Ad</th><th>Paket</th><th>Tutar</th><th></th></tr>
  ${
   data[type]
-  .filter(x=>x.ad.toLowerCase().includes(search))
-  .map((x,i)=>`
-   <tr>
-    <td><span class="icon ${icon(x.tutar)}"></span></td>
-    <td>${x.ad}</td>
-    <td>${x.paket}</td>
-    <td>${x.tutar}</td>
-    <td><button class="small" onclick="sil('${type}',${i})">✖</button></td>
-   </tr>`).join('')
+   .filter(x=>!search || x.ad.toLowerCase().includes(search))
+   .map((x,i)=>`
+    <tr>
+      <td><span class="icon ${icon(x.tutar)}"></span></td>
+      <td>${x.ad}</td>
+      <td>${x.paket}</td>
+      <td>${x.tutar}</td>
+      <td><button class="small" onclick="sil('${type}',${i})">✖</button></td>
+    </tr>`).join('')
  }
  </table>`;
 }
@@ -141,9 +137,9 @@ function devirTable(arr){
   arr.length
   ? arr.map(x=>`
    <tr>
-    <td><span class="icon ${icon(x.tutar)}"></span></td>
-    <td>${x.ad}</td>
-    <td>${x.tutar}</td>
+     <td><span class="icon ${icon(x.tutar)}"></span></td>
+     <td>${x.ad}</td>
+     <td>${x.tutar}</td>
    </tr>`).join('')
   : `<tr><td colspan="3">Devir yok</td></tr>`
  }
@@ -153,33 +149,35 @@ function devirTable(arr){
 function render(){
  kurye.innerHTML=`
  <input placeholder="Kurye ara" oninput="kuryeSearch=this.value.toLowerCase();render()">
- <div class="card">
-  <b>Kuryenin Benden Alacağı:</b>
-  ${devirData.kurye.filter(x=>x.tutar>0).reduce((s,x)=>s+x.tutar,0)} ₺
- </div>
+ <div class="card"><b>Kuryenin Benden Alacağı:</b>
+ ${devirData.kurye.filter(x=>x.tutar>0).reduce((s,x)=>s+x.tutar,0)} ₺</div>
+
  <div class="card">
   <input id="ka" placeholder="Kurye adı">
   <input id="kp" type="number" placeholder="Paket" value="${lastValues.kurye.paket}">
   <input id="ku" type="number" placeholder="Ücret" value="${lastValues.kurye.ucret}">
   <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
  </div>
+
  ${tablo('kurye',kuryeSearch)}
- <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye)}</div>`;
+ <div class="section"><b>Kurye Devirleri</b>${devirTable(devirData.kurye)}</div>
+ `;
 
  isletme.innerHTML=`
  <input placeholder="İşletme ara" oninput="isletmeSearch=this.value.toLowerCase();render()">
- <div class="card">
-  <b>İşletmelerden Alacağım:</b>
-  ${devirData.isletme.filter(x=>x.tutar>0).reduce((s,x)=>s+x.tutar,0)} ₺
- </div>
+ <div class="card"><b>İşletmelerden Alacağım:</b>
+ ${devirData.isletme.filter(x=>x.tutar>0).reduce((s,x)=>s+x.tutar,0)} ₺</div>
+
  <div class="card">
   <input id="ia" placeholder="İşletme adı">
   <input id="ip" type="number" placeholder="Paket" value="${lastValues.isletme.paket}">
   <input id="iu" type="number" placeholder="Ücret" value="${lastValues.isletme.ucret}">
   <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
  </div>
+
  ${tablo('isletme',isletmeSearch)}
- <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme)}</div>`;
+ <div class="section"><b>İşletme Devirleri</b>${devirTable(devirData.isletme)}</div>
+ `;
 }
 
 render();
