@@ -99,6 +99,18 @@ function tab(x){
  render()
 }
 
+function tablo(arr,gunluk){
+ return `<table>
+ <tr><th>Ad</th>${gunluk?"<th>Paket</th>":""}<th>Tutar</th></tr>
+ ${arr.map(x=>`
+ <tr>
+  <td>${x.ad}</td>
+  ${gunluk?`<td>${x.paket}</td>`:""}
+  <td>${x.tutar}</td>
+ </tr>`).join("")}
+ </table>`
+}
+
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
  data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
@@ -131,32 +143,11 @@ function odemeGir(){
 
 function excelAktar(){
  let wb=XLSX.utils.book_new()
-
- XLSX.utils.book_append_sheet(wb,
-  XLSX.utils.aoa_to_sheet([["Kurye","Paket","Tutar"],...data.kurye.map(x=>[x.ad,x.paket,x.tutar])]),
-  "Günlük Kurye"
- )
-
- XLSX.utils.book_append_sheet(wb,
-  XLSX.utils.aoa_to_sheet([["İşletme","Paket","Tutar"],...data.isletme.map(x=>[x.ad,x.paket,x.tutar])]),
-  "Günlük İşletme"
- )
-
- XLSX.utils.book_append_sheet(wb,
-  XLSX.utils.aoa_to_sheet([["Ad","Tutar"],...devir.kurye.map(x=>[x.ad,x.tutar])]),
-  "Kurye Devir"
- )
-
- XLSX.utils.book_append_sheet(wb,
-  XLSX.utils.aoa_to_sheet([["Ad","Tutar"],...devir.isletme.map(x=>[x.ad,x.tutar])]),
-  "İşletme Devir"
- )
-
- XLSX.utils.book_append_sheet(wb,
-  XLSX.utils.aoa_to_sheet([["Tarih","Tip","Ad","Tutar"],...odemeler.map(o=>[o.tarih,o.tip,o.ad,o.tutar])]),
-  "Ödemeler"
- )
-
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"Gunluk Kurye")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"Gunluk Isletme")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devir.kurye),"Devir Kurye")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devir.isletme),"Devir Isletme")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(odemeler),"Odemeler")
  XLSX.writeFile(wb,"kurye_takip.xlsx")
 }
 
@@ -167,26 +158,38 @@ function render(){
   <input id="kp" type="number" placeholder="Paket">
   <input id="ku" type="number" placeholder="Ücret">
   <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
- </div>`
+ </div>
+ <b>Günlük</b>${tablo(data.kurye,true)}
+ <b>Devir</b>${tablo(devir.kurye,false)}
+`
+
  isletme.innerHTML=`
  <div class="card">
   <input id="ia" placeholder="İşletme adı">
   <input id="ip" type="number" placeholder="Paket">
   <input id="iu" type="number" placeholder="Ücret">
   <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
- </div>`
+ </div>
+ <b>Günlük</b>${tablo(data.isletme,true)}
+ <b>Devir</b>${tablo(devir.isletme,false)}
+`
 
  let tK=devir.kurye.reduce((a,b)=>a+b.tutar,0)
  let tI=devir.isletme.reduce((a,b)=>a+b.tutar,0)
  topKurye.innerText=tK+" ₺"
  topIsletme.innerText=tI+" ₺"
- barKurye.style.width=(tK/Math.max(tK,tI,1)*100)+"%"
- barIsletme.style.width=(tI/Math.max(tK,tI,1)*100)+"%"
 
  odemeAd.innerHTML=""
  new Set(devir[odemeTip.value].map(x=>x.ad))
  .forEach(a=>odemeAd.add(new Option(a,a)))
+
+ odemeTablo.innerHTML=`
+ <table>
+ <tr><th>Tarih</th><th>Tip</th><th>Ad</th><th>Tutar</th></tr>
+ ${odemeler.map(o=>`<tr><td>${o.tarih}</td><td>${o.tip}</td><td>${o.ad}</td><td>${o.tutar}</td></tr>`).join("")}
+ </table>`
 }
+
 odemeTip.onchange=render
 render()
 </script>
