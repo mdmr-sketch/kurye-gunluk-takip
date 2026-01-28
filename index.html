@@ -24,46 +24,45 @@ table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .icon{width:8px;height:8px;border-radius:50%;display:inline-block}
 .red{background:var(--red)}
-.blue{background:var(--blue)}
 .green{background:var(--green)}
 .actions{display:flex;gap:6px;justify-content:center}
-.actions button{
- width:auto;
- padding:4px 6px;
- font-size:14px;
- background:#475569;
-}
+.actions button{width:auto;padding:4px 6px;font-size:14px;background:#475569}
 
-/* ===== TOPLAM KARTLARI ===== */
+/* ===== ÖZET ===== */
 .summary{
  display:grid;
  grid-template-columns:1fr 1fr;
  gap:10px;
- margin-top:10px;
 }
 .summary-card{
- background:linear-gradient(145deg,#020617,#020617);
+ background:#020617;
  padding:12px;
  border-radius:14px;
- display:flex;
- align-items:center;
- gap:12px;
  box-shadow:0 0 0 1px #1e293b inset;
 }
-.summary-icon{
- font-size:26px;
+.summary-title{font-size:12px;opacity:.8}
+.summary-amount{font-size:20px;font-weight:bold;margin:4px 0}
+
+/* ===== MİNİ GRAFİK ===== */
+.mini-chart{
+ background:#020617;
+ border-radius:10px;
+ padding:8px;
+ margin-top:8px;
 }
-.summary-text{
- font-size:12px;
- opacity:.8;
+.bar{
+ height:10px;
+ border-radius:6px;
+ margin:6px 0;
+ background:#334155;
+ overflow:hidden;
 }
-.summary-amount{
- font-size:20px;
- font-weight:bold;
- margin-top:2px;
+.fill{
+ height:100%;
+ transition:width .4s ease;
 }
-.pay{border-left:4px solid var(--red)}
-.get{border-left:4px solid var(--green)}
+.fill.kurye{background:linear-gradient(90deg,#ef4444,#fb7185)}
+.fill.isletme{background:linear-gradient(90deg,#22c55e,#4ade80)}
 
 @media(max-width:600px){
  .summary{grid-template-columns:1fr}
@@ -81,7 +80,6 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
-<!-- ÖDEME -->
 <div class="card">
  <b>💳 ÖDEME GİRİŞİ</b>
 
@@ -94,21 +92,21 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  <input type="number" id="odemeTutar" placeholder="Ödeme Tutarı">
  <button onclick="odemeGir()">ÖDEME YAP</button>
 
- <!-- GÜZELLEŞTİRİLMİŞ TOPLAM ALAN -->
+ <!-- TOPLAM + MİNİ GRAFİK -->
  <div class="summary">
-  <div class="summary-card pay">
-   <div class="summary-icon">🛵</div>
-   <div>
-    <div class="summary-text">Kuryelere Ödenecek</div>
-    <div class="summary-amount" id="topKurye">0 ₺</div>
+  <div class="summary-card">
+   <div class="summary-title">🛵 Kuryelere Ödenecek</div>
+   <div class="summary-amount" id="topKurye">0 ₺</div>
+   <div class="mini-chart">
+    <div class="bar"><div id="barKurye" class="fill kurye"></div></div>
    </div>
   </div>
 
-  <div class="summary-card get">
-   <div class="summary-icon">🍕</div>
-   <div>
-    <div class="summary-text">İşletmelerden Alınacak</div>
-    <div class="summary-amount" id="topIsletme">0 ₺</div>
+  <div class="summary-card">
+   <div class="summary-title">🍕 İşletmelerden Alınacak</div>
+   <div class="summary-amount" id="topIsletme">0 ₺</div>
+   <div class="mini-chart">
+    <div class="bar"><div id="barIsletme" class="fill isletme"></div></div>
    </div>
   </div>
  </div>
@@ -118,7 +116,6 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="odemeTablo"></div>
 
 <button onclick="gunSonu()">GÜN SONU AL</button>
-<button onclick="excelAktar()">EXCEL DIŞA AKTAR</button>
 
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
@@ -142,25 +139,10 @@ function tab(x){
  render()
 }
 
-function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
-
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
  data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
  save()
-}
-
-function sil(type,i,g){
- if(confirm("Silinsin mi?")){
-  g?data[type].splice(i,1):devir[type].splice(i,1)
-  save()
- }
-}
-
-function duzenle(type,i,g){
- let a=g?data[type]:devir[type]
- let t=prompt("Yeni tutar",a[i].tutar)
- if(t!==null){a[i].tutar=+t||0;save()}
 }
 
 function gunSonu(){
@@ -187,66 +169,30 @@ function odemeGir(){
  save()
 }
 
-function tablo(type,arr,g){
+function tablo(type,arr){
  return `<table>
- <tr><th></th><th>Ad</th>${g?"<th>Paket</th>":""}<th>Tutar</th><th>İşlem</th></tr>
- ${arr.map((x,i)=>`
- <tr>
- <td><span class="icon ${icon(x.tutar)}"></span></td>
- <td>${x.ad}</td>
- ${g?`<td>${x.paket}</td>`:""}
- <td>${x.tutar}</td>
- <td class="actions">
-  <button onclick="duzenle('${type}',${i},${g})">✏️</button>
-  <button onclick="sil('${type}',${i},${g})">🗑️</button>
- </td>
- </tr>`).join("")}
+ <tr><th>Ad</th><th>Tutar</th></tr>
+ ${arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
  </table>`
 }
-
-function tabloOdeme(){
- return `<table>
- <tr><th>Tarih</th><th>Tip</th><th>Ad</th><th>Tutar</th></tr>
- ${odemeler.map(o=>`
- <tr><td>${o.tarih}</td><td>${o.tip}</td><td>${o.ad}</td><td>${o.tutar}</td></tr>`).join("")}
- </table>`
-}
-
-function excelAktar(){ alert("Excel yarın 👍") }
 
 function render(){
- kurye.innerHTML=`
- <div style="text-align:center;font-size:40px">🛵</div>
- <div class="card">
-  <input id="ka" placeholder="Kurye adı">
-  <input type="number" placeholder="Paket" id="kp">
-  <input type="number" placeholder="Ücret" id="ku">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
- </div>
- <b>Günlük</b>${tablo("kurye",data.kurye,true)}
- <b>Devir</b>${tablo("kurye",devir.kurye,false)}
-`
+ kurye.innerHTML=`<b>Devir</b>${tablo("kurye",devir.kurye)}`
+ isletme.innerHTML=`<b>Devir</b>${tablo("isletme",devir.isletme)}`
 
- isletme.innerHTML=`
- <div style="text-align:center;font-size:40px">🍕</div>
- <div class="card">
-  <input id="ia" placeholder="İşletme adı">
-  <input type="number" placeholder="Paket" id="ip">
-  <input type="number" placeholder="Ücret" id="iu">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
- </div>
- <b>Günlük</b>${tablo("isletme",data.isletme,true)}
- <b>Devir</b>${tablo("isletme",devir.isletme,false)}
-`
+ let tk=devir.kurye.reduce((a,b)=>a+b.tutar,0)
+ let ti=devir.isletme.reduce((a,b)=>a+b.tutar,0)
+ let max=Math.max(tk,ti,1)
 
- topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
- topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topKurye.innerText=tk+" ₺"
+ topIsletme.innerText=ti+" ₺"
+
+ barKurye.style.width=(tk/max*100)+"%"
+ barIsletme.style.width=(ti/max*100)+"%"
 
  odemeAd.innerHTML=""
  new Set(devir[odemeTip.value].map(x=>x.ad))
  .forEach(a=>odemeAd.add(new Option(a,a)))
-
- odemeTablo.innerHTML=tabloOdeme()
 }
 odemeTip.addEventListener("change",render)
 render()
