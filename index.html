@@ -28,15 +28,24 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .actions{display:flex;gap:6px;justify-content:center}
 .actions button{
  width:auto;
- padding:4px 6px;
- font-size:13px;
+ padding:4px 8px;
+ font-size:12px;
  background:#475569;
+ border-radius:6px;
+}
+.flex{
+ display:flex;
+ gap:8px;
+}
+.flex .card{
+ flex:1;
+ text-align:center;
+ font-weight:bold;
 }
 </style>
 </head>
 <body>
 
-<!-- SEKME BUTONLARI -->
 <div class="tabbar">
  <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
  <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
@@ -45,29 +54,31 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
-<!-- ÖDEME -->
 <div class="card">
  <b>💳 ÖDEME GİRİŞİ</b>
  <select id="odemeTip">
-   <option value="kurye">Kurye</option>
-   <option value="isletme">İşletme</option>
+  <option value="kurye">Kurye</option>
+  <option value="isletme">İşletme</option>
  </select>
  <select id="odemeAd"></select>
  <input type="number" id="odemeTutar" placeholder="Ödenecek Tutar">
  <button onclick="odemeGir()">ÖDEME YAP</button>
 </div>
 
+<div class="flex">
+ <div class="card">🛵 Toplam Ödenecek<br><span id="topKurye">0</span> TL</div>
+ <div class="card">🍕 Toplam Alınacak<br><span id="topIsletme">0</span> TL</div>
+</div>
+
 <b>Ödeme Tablosu</b>
 <div id="odemeTablo"></div>
 
 <button onclick="gunSonu()">GÜN SONU AL</button>
-<button onclick="excelAktar()">EXCEL DIŞA AKTAR</button>
 
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
 let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
-let last={kurye:{p:'',u:''},isletme:{p:'',u:''}}
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
@@ -83,114 +94,99 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- render()
 }
 
-function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
+function icon(v){return v>0?"red":v<0?"blue":"green"}
 
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
- p=Number(p)||0; u=Number(u)||0
- last[type]={p,u}
- data[type].push({ad,paket:p,tutar:p*u})
+ data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
  save()
+}
+
+function duzenle(type,i,isGunluk){
+ let x=isGunluk?data[type][i]:devir[type][i]
+ let t=prompt("Tutar",x.tutar)
+ if(t!==null){x.tutar=+t;save()}
+}
+
+function sil(type,i,isGunluk){
+ if(confirm("Silinsin mi?")){
+  (isGunluk?data[type]:devir[type]).splice(i,1)
+  save()
+ }
 }
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let map={}
-  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
-  Object.entries(map).forEach(([ad,top])=>{
-   let d=devir[t].find(x=>x.ad===ad)
-   if(d) d.tutar+=top
-   else devir[t].push({ad,tutar:top})
+  data[t].forEach(x=>{
+   let d=devir[t].find(y=>y.ad===x.ad)
+   d?d.tutar+=x.tutar:devir[t].push({ad:x.ad,tutar:x.tutar})
   })
   data[t]=[]
  })
  save()
 }
 
-// ÖDEME
 function odemeGir(){
- let tip=odemeTip.value
- let ad=odemeAd.value
- let tutar=Number(odemeTutar.value)
- if(!ad||!tutar) return alert("Eksik bilgi")
-
- let g=data[tip].find(x=>x.ad===ad)
- if(g){
-   g.tutar=Math.max(0,g.tutar-tutar)
- }else{
-   let d=devir[tip].find(x=>x.ad===ad)
-   if(d) d.tutar=Math.max(0,d.tutar-tutar)
- }
-
- odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
+ let tip=odemeTip.value,ad=odemeAd.value,t=+odemeTutar.value
+ if(!ad||!t) return
+ let x=data[tip].find(x=>x.ad===ad)||devir[tip].find(x=>x.ad===ad)
+ if(x) x.tutar=Math.max(0,x.tutar-t)
+ odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar:t})
  save()
 }
 
-// TABLOLAR
 function tablo(type,arr,gunluk){
  return `<table>
- <tr>${gunluk?"<th></th><th>Ad</th><th>Paket</th><th>Tutar</th>":"<th></th><th>Ad</th><th>Tutar</th>"}</tr>
- ${arr.map(x=>`
+ <tr><th></th><th>Ad</th>${gunluk?"<th>Paket</th>":""}<th>Tutar</th><th></th></tr>
+ ${arr.map((x,i)=>`
  <tr>
  <td><span class="icon ${icon(x.tutar)}"></span></td>
  <td>${x.ad}</td>
  ${gunluk?`<td>${x.paket}</td>`:""}
  <td>${x.tutar}</td>
+ <td class="actions">
+  <button onclick="duzenle('${type}',${i},${gunluk})">✏️</button>
+  <button onclick="sil('${type}',${i},${gunluk})">🗑️</button>
+ </td>
  </tr>`).join("")}
  </table>`
 }
 
-function tabloOdeme(){
- return `<table>
- <tr><th>Tarih</th><th>Tip</th><th>Ad</th><th>Tutar</th></tr>
- ${odemeler.map(o=>`
- <tr><td>${o.tarih}</td><td>${o.tip}</td><td>${o.ad}</td><td>${o.tutar}</td></tr>`).join("")}
- </table>`
-}
-
-// EXCEL (DEĞİŞMEDİ)
-function excelAktar(){ alert("Excel yarın devam 👍") }
-
 function render(){
  kurye.innerHTML=`
- <div style="text-align:center;font-size:40px;margin-bottom:6px">🛵</div>
+ <div style="text-align:center;font-size:40px">🛵</div>
  <div class="card">
   <input id="ka" placeholder="Kurye adı">
-  <input type="number" placeholder="Paket" id="kp">
-  <input type="number" placeholder="Ücret" id="ku">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+  <input id="kp" type="number" placeholder="Paket">
+  <input id="ku" type="number" placeholder="Ücret">
+  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
  </div>
  <b>Günlük</b>${tablo("kurye",data.kurye,true)}
  <b>Devir</b>${tablo("kurye",devir.kurye,false)}
 `
 
  isletme.innerHTML=`
- <div style="text-align:center;font-size:40px;margin-bottom:6px">🍕</div>
+ <div style="text-align:center;font-size:40px">🍕</div>
  <div class="card">
   <input id="ia" placeholder="İşletme adı">
-  <input type="number" placeholder="Paket" id="ip">
-  <input type="number" placeholder="Ücret" id="iu">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+  <input id="ip" type="number" placeholder="Paket">
+  <input id="iu" type="number" placeholder="Ücret">
+  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
  </div>
  <b>Günlük</b>${tablo("isletme",data.isletme,true)}
  <b>Devir</b>${tablo("isletme",devir.isletme,false)}
 `
 
- let sel=odemeAd
- sel.innerHTML=""
- let tip=odemeTip.value
- new Set([...data[tip],...devir[tip]].map(x=>x.ad))
- .forEach(ad=>{
-  let o=document.createElement("option")
-  o.value=o.text=ad
-  sel.add(o)
- })
- odemeTablo.innerHTML=tabloOdeme()
+ topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)
+ topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)
+
+ odemeAd.innerHTML=""
+ new Set([...data[odemeTip.value],...devir[odemeTip.value]].map(x=>x.ad))
+ .forEach(a=>odemeAd.add(new Option(a,a)))
 }
-odemeTip.addEventListener("change",render)
+odemeTip.onchange=render
 render()
 </script>
 </body>
