@@ -24,49 +24,37 @@ table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .icon{width:8px;height:8px;border-radius:50%;display:inline-block}
 .red{background:var(--red)}
+.blue{background:var(--blue)}
 .green{background:var(--green)}
 .actions{display:flex;gap:6px;justify-content:center}
-.actions button{width:auto;padding:4px 6px;font-size:14px;background:#475569}
+.actions button{width:auto;padding:4px 6px;font-size:13px;background:#475569}
 
-/* ===== ÖZET ===== */
+/* ===== TOPLAM KARTLAR ===== */
 .summary{
- display:grid;
- grid-template-columns:1fr 1fr;
- gap:10px;
-}
-.summary-card{
- background:#020617;
- padding:12px;
- border-radius:14px;
- box-shadow:0 0 0 1px #1e293b inset;
-}
-.summary-title{font-size:12px;opacity:.8}
-.summary-amount{font-size:20px;font-weight:bold;margin:4px 0}
-
-/* ===== MİNİ GRAFİK ===== */
-.mini-chart{
- background:#020617;
- border-radius:10px;
- padding:8px;
+ display:flex;
+ gap:8px;
  margin-top:8px;
 }
+.sum-card{
+ flex:1;
+ background:#020617;
+ border-radius:12px;
+ padding:10px;
+}
+.sum-title{font-size:12px;opacity:.8}
+.sum-value{font-size:18px;font-weight:bold;margin:4px 0}
 .bar{
- height:10px;
- border-radius:6px;
- margin:6px 0;
+ height:8px;
  background:#334155;
+ border-radius:6px;
  overflow:hidden;
 }
 .fill{
  height:100%;
- transition:width .4s ease;
+ transition:.4s;
 }
-.fill.kurye{background:linear-gradient(90deg,#ef4444,#fb7185)}
-.fill.isletme{background:linear-gradient(90deg,#22c55e,#4ade80)}
-
-@media(max-width:600px){
- .summary{grid-template-columns:1fr}
-}
+.fill.kurye{background:#ef4444}
+.fill.isletme{background:#22c55e}
 </style>
 </head>
 
@@ -80,52 +68,41 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
+<!-- ÖDEME -->
 <div class="card">
  <b>💳 ÖDEME GİRİŞİ</b>
-
  <select id="odemeTip">
   <option value="kurye">Kurye</option>
   <option value="isletme">İşletme</option>
  </select>
-
  <select id="odemeAd"></select>
- <input type="number" id="odemeTutar" placeholder="Ödeme Tutarı">
+ <input type="number" id="odemeTutar" placeholder="Tutar">
  <button onclick="odemeGir()">ÖDEME YAP</button>
 
  <!-- TOPLAM + MİNİ GRAFİK -->
  <div class="summary">
-  <div class="summary-card">
-   <div class="summary-title">🛵 Kuryelere Ödenecek</div>
-   <div class="summary-amount" id="topKurye">0 ₺</div>
-   <div class="mini-chart">
-    <div class="bar"><div id="barKurye" class="fill kurye"></div></div>
-   </div>
+  <div class="sum-card">
+   <div class="sum-title">🛵 Kuryelere Ödenecek</div>
+   <div class="sum-value" id="topKurye">0 ₺</div>
+   <div class="bar"><div id="barKurye" class="fill kurye"></div></div>
   </div>
-
-  <div class="summary-card">
-   <div class="summary-title">🍕 İşletmelerden Alınacak</div>
-   <div class="summary-amount" id="topIsletme">0 ₺</div>
-   <div class="mini-chart">
-    <div class="bar"><div id="barIsletme" class="fill isletme"></div></div>
-   </div>
+  <div class="sum-card">
+   <div class="sum-title">🍕 İşletmelerden Alınacak</div>
+   <div class="sum-value" id="topIsletme">0 ₺</div>
+   <div class="bar"><div id="barIsletme" class="fill isletme"></div></div>
   </div>
  </div>
 </div>
-
-<b>Ödeme Tablosu</b>
-<div id="odemeTablo"></div>
 
 <button onclick="gunSonu()">GÜN SONU AL</button>
 
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
-let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
  localStorage.setItem("devir",JSON.stringify(devir))
- localStorage.setItem("odemeler",JSON.stringify(odemeler))
  render()
 }
 
@@ -140,7 +117,7 @@ function tab(x){
 }
 
 function ekle(type,ad,p,u){
- if(!ad) return alert("İsim gir")
+ if(!ad)return
  data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
  save()
 }
@@ -162,14 +139,13 @@ function odemeGir(){
  let tip=odemeTip.value
  let ad=odemeAd.value
  let tutar=+odemeTutar.value
- if(!ad||!tutar) return alert("Eksik bilgi")
+ if(!ad||!tutar)return
  let d=devir[tip].find(x=>x.ad===ad)
- if(d) d.tutar=Math.max(0,d.tutar-tutar)
- odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
+ if(d)d.tutar=Math.max(0,d.tutar-tutar)
  save()
 }
 
-function tablo(type,arr){
+function tablo(arr){
  return `<table>
  <tr><th>Ad</th><th>Tutar</th></tr>
  ${arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
@@ -177,8 +153,8 @@ function tablo(type,arr){
 }
 
 function render(){
- kurye.innerHTML=`<b>Devir</b>${tablo("kurye",devir.kurye)}`
- isletme.innerHTML=`<b>Devir</b>${tablo("isletme",devir.isletme)}`
+ kurye.innerHTML=`<b>Devir</b>${tablo(devir.kurye)}`
+ isletme.innerHTML=`<b>Devir</b>${tablo(devir.isletme)}`
 
  let tk=devir.kurye.reduce((a,b)=>a+b.tutar,0)
  let ti=devir.isletme.reduce((a,b)=>a+b.tutar,0)
@@ -186,7 +162,6 @@ function render(){
 
  topKurye.innerText=tk+" ₺"
  topIsletme.innerText=ti+" ₺"
-
  barKurye.style.width=(tk/max*100)+"%"
  barIsletme.style.width=(ti/max*100)+"%"
 
@@ -197,5 +172,6 @@ function render(){
 odemeTip.addEventListener("change",render)
 render()
 </script>
+
 </body>
 </html>
