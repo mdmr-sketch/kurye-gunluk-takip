@@ -21,10 +21,24 @@ button{background:var(--blue);color:#fff;font-weight:bold}
 .hidden{display:none}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
+.icon{width:8px;height:8px;border-radius:50%;display:inline-block}
+.red{background:#ef4444}
+.blue{background:#3b82f6}
+.green{background:#22c55e}
+.actions{display:flex;gap:6px;justify-content:center}
+.actions button{
+ width:auto;
+ padding:4px 6px;
+ font-size:13px;
+ background:#475569;
+}
 .total{
+ margin-top:6px;
+ padding:8px;
  background:#020617;
+ border-radius:8px;
+ text-align:right;
  font-weight:bold;
- color:#22c55e;
 }
 </style>
 </head>
@@ -38,14 +52,33 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
+<div class="card">
+ <b>ÖDEME GİRİŞİ</b>
+ <select id="odemeTip">
+   <option value="kurye">Kurye</option>
+   <option value="isletme">İşletme</option>
+ </select>
+ <select id="odemeAd"></select>
+ <input type="number" id="odemeTutar" placeholder="Ödenecek Tutar">
+ <button onclick="odemeGir()">ÖDEME YAP</button>
+</div>
+
+<b>Ödeme Tablosu</b>
+<div id="odemeTablo"></div>
+
+<button onclick="gunSonu()">GÜN SONU AL</button>
+<button onclick="excelAktar()">EXCEL DIŞA AKTAR</button>
+
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
+let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
 let last={kurye:{p:'',u:''},isletme:{p:'',u:''}}
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
  localStorage.setItem("devir",JSON.stringify(devir))
+ localStorage.setItem("odemeler",JSON.stringify(odemeler))
  render()
 }
 
@@ -56,7 +89,10 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+ render()
 }
+
+function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
 
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
@@ -80,67 +116,77 @@ function gunSonu(){
  save()
 }
 
-function toplam(type){
- let t=0
- data[type].forEach(x=>t+=x.tutar)
- devir[type].forEach(x=>t+=x.tutar)
- return t
+function odemeGir(){
+ let tip=odemeTip.value
+ let ad=odemeAd.value
+ let tutar=Number(odemeTutar.value)
+ if(!ad||!tutar) return alert("İsim ve tutar gir")
+
+ let d=devir[tip].find(x=>x.ad===ad)
+ if(d){
+  d.tutar-=tutar
+  if(d.tutar<0)d.tutar=0
+ }
+
+ odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
+ save()
 }
 
-function tablo(type){
- let rows=data[type].map(x=>`
- <tr>
-  <td>${x.ad}</td>
-  <td>${x.paket}</td>
-  <td>${x.tutar}</td>
- </tr>`).join("")
-
- let dev=devir[type].map(x=>`
- <tr>
-  <td>${x.ad}</td>
-  <td>-</td>
-  <td>${x.tutar}</td>
- </tr>`).join("")
-
+function tabloDevir(type){
+ let toplam=devir[type].reduce((s,x)=>s+x.tutar,0)
  return `
  <table>
- <tr><th>Ad</th><th>Paket</th><th>Tutar</th></tr>
- ${rows}
- ${dev}
- <tr class="total">
-  <td colspan="2">TOPLAM</td>
-  <td>${toplam(type)}</td>
- </tr>
- </table>`
+ <tr><th></th><th>Ad</th><th>Tutar</th></tr>
+ ${devir[type].map(x=>`
+ <tr>
+ <td><span class="icon ${icon(x.tutar)}"></span></td>
+ <td>${x.ad}</td>
+ <td>${x.tutar}</td>
+ </tr>`).join("")}
+ </table>
+ <div class="total">
+ ${type==="kurye"?"Toplam Kuryelere Ödenecek":"Toplam İşletmelerden Alınacak"}: ${toplam} TL
+ </div>
+ `
 }
 
 function render(){
  kurye.innerHTML=`
  <div class="card">
-  <input id="ka" placeholder="Kurye adı">
-  <input type="number" placeholder="Paket" value="${last.kurye.p}" id="kp">
-  <input type="number" placeholder="Ücret" value="${last.kurye.u}" id="ku">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
+ <input id="ka" placeholder="Kurye adı">
+ <input type="number" placeholder="Paket" id="kp">
+ <input type="number" placeholder="Ücret" id="ku">
+ <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
  </div>
- <b>Kuryelere Ödenecek Toplam</b>
- ${tablo("kurye")}
+ <b>Devir</b>
+ ${tabloDevir("kurye")}
  `
-
  isletme.innerHTML=`
  <div class="card">
-  <input id="ia" placeholder="İşletme adı">
-  <input type="number" placeholder="Paket" value="${last.isletme.p}" id="ip">
-  <input type="number" placeholder="Ücret" value="${last.isletme.u}" id="iu">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
+ <input id="ia" placeholder="İşletme adı">
+ <input type="number" placeholder="Paket" id="ip">
+ <input type="number" placeholder="Ücret" id="iu">
+ <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
  </div>
- <b>İşletmelerden Alınacak Toplam</b>
- ${tablo("isletme")}
+ <b>Devir</b>
+ ${tabloDevir("isletme")}
  `
+ let sel=odemeAd
+ sel.innerHTML=""
+ let tip=odemeTip.value
+ new Set(devir[tip].map(x=>x.ad)).forEach(a=>{
+  let o=document.createElement("option");o.text=o.value=a;sel.add(o)
+ })
+ odemeTablo.innerHTML=`
+ <table>
+ <tr><th>Tarih</th><th>Tip</th><th>Ad</th><th>Tutar</th></tr>
+ ${odemeler.map(o=>`
+ <tr><td>${o.tarih}</td><td>${o.tip}</td><td>${o.ad}</td><td>${o.tutar}</td></tr>
+ `).join("")}
+ </table>`
 }
+odemeTip.onchange=render
 render()
 </script>
-
-<button onclick="gunSonu()">GÜN SONU AL</button>
-
 </body>
 </html>
