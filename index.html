@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
+
 <style>
 :root{
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
@@ -28,22 +29,26 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .actions{display:flex;gap:6px;justify-content:center}
 .actions button{
  width:auto;
- padding:4px 8px;
- font-size:12px;
+ padding:4px 6px;
+ font-size:14px;
  background:#475569;
- border-radius:6px;
 }
-.flex{
+.summary{
  display:flex;
  gap:8px;
+ margin-top:8px;
 }
-.flex .card{
+.summary div{
  flex:1;
+ background:#020617;
+ padding:8px;
+ border-radius:8px;
  text-align:center;
  font-weight:bold;
 }
 </style>
 </head>
+
 <body>
 
 <div class="tabbar">
@@ -54,26 +59,31 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
+<!-- ÖDEME -->
 <div class="card">
  <b>💳 ÖDEME GİRİŞİ</b>
+
  <select id="odemeTip">
   <option value="kurye">Kurye</option>
   <option value="isletme">İşletme</option>
  </select>
- <select id="odemeAd"></select>
- <input type="number" id="odemeTutar" placeholder="Ödenecek Tutar">
- <button onclick="odemeGir()">ÖDEME YAP</button>
-</div>
 
-<div class="flex">
- <div class="card">🛵 Toplam Ödenecek<br><span id="topKurye">0</span> TL</div>
- <div class="card">🍕 Toplam Alınacak<br><span id="topIsletme">0</span> TL</div>
+ <select id="odemeAd"></select>
+ <input type="number" id="odemeTutar" placeholder="Ödeme Tutarı">
+ <button onclick="odemeGir()">ÖDEME YAP</button>
+
+ <!-- TOPLAM ALAN -->
+ <div class="summary">
+  <div id="topKurye">Kuryelere Ödenecek: 0 ₺</div>
+  <div id="topIsletme">İşletmelerden Alınacak: 0 ₺</div>
+ </div>
 </div>
 
 <b>Ödeme Tablosu</b>
 <div id="odemeTablo"></div>
 
 <button onclick="gunSonu()">GÜN SONU AL</button>
+<button onclick="excelAktar()">EXCEL DIŞA AKTAR</button>
 
 <script>
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
@@ -94,34 +104,38 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+ render()
 }
 
-function icon(v){return v>0?"red":v<0?"blue":"green"}
+function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
 
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
- data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
+ p=+p||0; u=+u||0
+ data[type].push({ad,paket:p,tutar:p*u})
  save()
 }
 
-function duzenle(type,i,isGunluk){
- let x=isGunluk?data[type][i]:devir[type][i]
- let t=prompt("Tutar",x.tutar)
- if(t!==null){x.tutar=+t;save()}
-}
-
-function sil(type,i,isGunluk){
+function sil(type,i,gunluk){
  if(confirm("Silinsin mi?")){
-  (isGunluk?data[type]:devir[type]).splice(i,1)
+  gunluk?data[type].splice(i,1):devir[type].splice(i,1)
   save()
  }
 }
 
+function duzenle(type,i,gunluk){
+ let arr=gunluk?data[type]:devir[type]
+ let t=prompt("Yeni tutar",arr[i].tutar)
+ if(t!==null){arr[i].tutar=+t||0;save()}
+}
+
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  data[t].forEach(x=>{
-   let d=devir[t].find(y=>y.ad===x.ad)
-   d?d.tutar+=x.tutar:devir[t].push({ad:x.ad,tutar:x.tutar})
+  let map={}
+  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
+  Object.entries(map).forEach(([ad,top])=>{
+   let d=devir[t].find(x=>x.ad===ad)
+   d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
   data[t]=[]
  })
@@ -129,17 +143,23 @@ function gunSonu(){
 }
 
 function odemeGir(){
- let tip=odemeTip.value,ad=odemeAd.value,t=+odemeTutar.value
- if(!ad||!t) return
- let x=data[tip].find(x=>x.ad===ad)||devir[tip].find(x=>x.ad===ad)
- if(x) x.tutar=Math.max(0,x.tutar-t)
- odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar:t})
+ let tip=odemeTip.value
+ let ad=odemeAd.value
+ let tutar=+odemeTutar.value
+ if(!ad||!tutar) return alert("Eksik bilgi")
+
+ let d=devir[tip].find(x=>x.ad===ad)
+ if(d) d.tutar=Math.max(0,d.tutar-tutar)
+
+ odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
  save()
 }
 
 function tablo(type,arr,gunluk){
  return `<table>
- <tr><th></th><th>Ad</th>${gunluk?"<th>Paket</th>":""}<th>Tutar</th><th></th></tr>
+ <tr>
+ <th></th><th>Ad</th>${gunluk?"<th>Paket</th>":""}<th>Tutar</th><th>İşlem</th>
+ </tr>
  ${arr.map((x,i)=>`
  <tr>
  <td><span class="icon ${icon(x.tutar)}"></span></td>
@@ -154,14 +174,24 @@ function tablo(type,arr,gunluk){
  </table>`
 }
 
+function tabloOdeme(){
+ return `<table>
+ <tr><th>Tarih</th><th>Tip</th><th>Ad</th><th>Tutar</th></tr>
+ ${odemeler.map(o=>`
+ <tr><td>${o.tarih}</td><td>${o.tip}</td><td>${o.ad}</td><td>${o.tutar}</td></tr>`).join("")}
+ </table>`
+}
+
+function excelAktar(){ alert("Excel hazır değil, yarın devam 👍") }
+
 function render(){
  kurye.innerHTML=`
  <div style="text-align:center;font-size:40px">🛵</div>
  <div class="card">
   <input id="ka" placeholder="Kurye adı">
-  <input id="kp" type="number" placeholder="Paket">
-  <input id="ku" type="number" placeholder="Ücret">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
+  <input type="number" placeholder="Paket" id="kp">
+  <input type="number" placeholder="Ücret" id="ku">
+  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">GÜNLÜK EKLE</button>
  </div>
  <b>Günlük</b>${tablo("kurye",data.kurye,true)}
  <b>Devir</b>${tablo("kurye",devir.kurye,false)}
@@ -171,22 +201,26 @@ function render(){
  <div style="text-align:center;font-size:40px">🍕</div>
  <div class="card">
   <input id="ia" placeholder="İşletme adı">
-  <input id="ip" type="number" placeholder="Paket">
-  <input id="iu" type="number" placeholder="Ücret">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
+  <input type="number" placeholder="Paket" id="ip">
+  <input type="number" placeholder="Ücret" id="iu">
+  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">GÜNLÜK EKLE</button>
  </div>
  <b>Günlük</b>${tablo("isletme",data.isletme,true)}
  <b>Devir</b>${tablo("isletme",devir.isletme,false)}
 `
 
- topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)
- topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)
+ let topK=devir.kurye.reduce((a,b)=>a+b.tutar,0)
+ let topI=devir.isletme.reduce((a,b)=>a+b.tutar,0)
+ topKurye.innerText="Kuryelere Ödenecek: "+topK+" ₺"
+ topIsletme.innerText="İşletmelerden Alınacak: "+topI+" ₺"
 
  odemeAd.innerHTML=""
- new Set([...data[odemeTip.value],...devir[odemeTip.value]].map(x=>x.ad))
+ new Set([...devir[odemeTip.value]].map(x=>x.ad))
  .forEach(a=>odemeAd.add(new Option(a,a)))
+
+ odemeTablo.innerHTML=tabloOdeme()
 }
-odemeTip.onchange=render
+odemeTip.addEventListener("change",render)
 render()
 </script>
 </body>
