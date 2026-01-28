@@ -14,9 +14,9 @@
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
-button,input,select{padding:6px;border:none;border-radius:6px}
-input,select{background:var(--soft);color:#fff;width:100%}
-button{background:var(--blue);color:#fff;font-weight:bold;cursor:pointer}
+input,select,button{padding:8px;border:none;border-radius:6px}
+input,select{background:var(--soft);color:#fff;width:100%;margin-bottom:6px}
+button{background:var(--blue);color:#fff;font-weight:bold;cursor:pointer;margin-bottom:6px}
 button.small{padding:2px 6px;font-size:12px;margin:0 2px}
 .card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px}
 .tabbar{display:flex;gap:6px;margin-bottom:10px}
@@ -34,6 +34,9 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .pay{border-left:4px solid var(--red)}
 .get{border-left:4px solid var(--green)}
 .logo{text-align:center;font-size:48px;margin:5px 0}
+.input-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.input-group input{flex:1;min-width:80px}
+.input-group button{flex:none}
 </style>
 </head>
 <body>
@@ -116,10 +119,9 @@ function excelAktar(){
  let rows=[]
  devir.kurye.forEach(x=>rows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
  devir.isletme.forEach(x=>rows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
- let ws1=XLSX.utils.json_to_sheet(rows,{header:["Tip","Ad","Tutar"]})
- XLSX.utils.book_append_sheet(wb,ws1,"DEViRLER")
-
- // GÜNLÜK KURYE
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows,{header:["Tip","Ad","Tutar"]}),"DEViRLER")
+ 
+ // Günlük ayrı sayfada
  let kuryeMap={}
  data.kurye.filter(x=>x.gun===today).forEach(x=>{
    if(!kuryeMap[x.ad]) kuryeMap[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
@@ -135,7 +137,6 @@ function excelAktar(){
  })
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kuryeRows),"GÜNLÜK_KURYE")
 
- // GÜNLÜK ISLETME
  let isletmeMap={}
  data.isletme.filter(x=>x.gun===today).forEach(x=>{
    if(!isletmeMap[x.ad]) isletmeMap[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
@@ -182,20 +183,24 @@ function promptDuzenle(t,i){
 function render(){
  kurye.innerHTML=`
  <div class="card">
-  <input id="ka" placeholder="Kurye">
-  <input id="kp" type="number" placeholder="Paket">
-  <input id="ku" type="number" placeholder="Ücret">
-  <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
+  <div class="input-group">
+    <input id="ka" placeholder="Kurye Adı">
+    <input id="kp" type="number" placeholder="Paket">
+    <input id="ku" type="number" placeholder="Ücret">
+    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
+  </div>
  </div>
  <b>Günlük</b>${tablo(data.kurye,'kurye')}
  <b>Devir</b>${tablo(devir.kurye,'kurye')}
  `
  isletme.innerHTML=`
  <div class="card">
-  <input id="ia" placeholder="İşletme">
-  <input id="ip" type="number" placeholder="Paket">
-  <input id="iu" type="number" placeholder="Ücret">
-  <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
+  <div class="input-group">
+    <input id="ia" placeholder="İşletme Adı">
+    <input id="ip" type="number" placeholder="Paket">
+    <input id="iu" type="number" placeholder="Ücret">
+    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
+  </div>
  </div>
  <b>Günlük</b>${tablo(data.isletme,'isletme')}
  <b>Devir</b>${tablo(devir.isletme,'isletme')}
