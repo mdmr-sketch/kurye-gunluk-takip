@@ -25,12 +25,6 @@ button{background:var(--blue);color:#fff;font-weight:bold}
 .hidden{display:none}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
-.icon{width:8px;height:8px;border-radius:50%;display:inline-block}
-.red{background:var(--red)}
-.blue{background:var(--blue)}
-.green{background:var(--green)}
-.actions{display:flex;gap:6px;justify-content:center}
-.actions button{width:auto;padding:4px 6px;font-size:14px;background:#475569}
 .logo{text-align:center;font-size:48px;margin:5px 0}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .summary-card{background:#020617;padding:12px;border-radius:14px}
@@ -122,14 +116,36 @@ function odemeGir(){
  save()
 }
 
+/* ===== DÜZENLİ & PROFESYONEL EXCEL ===== */
 function excelAktar(){
  let rows=[]
- devir.kurye.forEach(x=>rows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
- devir.isletme.forEach(x=>rows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
- let ws=XLSX.utils.json_to_sheet(rows)
+
+ devir.kurye.forEach(x=>{
+  rows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar})
+ })
+ devir.isletme.forEach(x=>{
+  rows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar})
+ })
+
+ let ws=XLSX.utils.json_to_sheet(rows,{header:["Tip","Ad","Tutar"]})
+
+ ws["!cols"]=[
+  {wch:12},
+  {wch:25},
+  {wch:15}
+ ]
+
+ Object.keys(ws).forEach(c=>{
+  if(c.startsWith("C") && c!=="C1"){
+   ws[c].z='₺#,##0.00'
+  }
+ })
+
  let wb=XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(wb,ws,"Devirler")
- XLSX.writeFile(wb,"kurye_takip.xlsx")
+
+ let tarih=new Date().toISOString().slice(0,10)
+ XLSX.writeFile(wb,"kurye_takip_"+tarih+".xlsx")
 }
 
 function tablo(arr){
