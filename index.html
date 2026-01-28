@@ -33,18 +33,40 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  font-size:14px;
  background:#475569;
 }
+
+/* ===== TOPLAM KARTLARI ===== */
 .summary{
- display:flex;
- gap:8px;
- margin-top:8px;
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px;
+ margin-top:10px;
 }
-.summary div{
- flex:1;
- background:#020617;
- padding:8px;
- border-radius:8px;
- text-align:center;
+.summary-card{
+ background:linear-gradient(145deg,#020617,#020617);
+ padding:12px;
+ border-radius:14px;
+ display:flex;
+ align-items:center;
+ gap:12px;
+ box-shadow:0 0 0 1px #1e293b inset;
+}
+.summary-icon{
+ font-size:26px;
+}
+.summary-text{
+ font-size:12px;
+ opacity:.8;
+}
+.summary-amount{
+ font-size:20px;
  font-weight:bold;
+ margin-top:2px;
+}
+.pay{border-left:4px solid var(--red)}
+.get{border-left:4px solid var(--green)}
+
+@media(max-width:600px){
+ .summary{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -72,10 +94,23 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  <input type="number" id="odemeTutar" placeholder="Ödeme Tutarı">
  <button onclick="odemeGir()">ÖDEME YAP</button>
 
- <!-- TOPLAM ALAN -->
+ <!-- GÜZELLEŞTİRİLMİŞ TOPLAM ALAN -->
  <div class="summary">
-  <div id="topKurye">Kuryelere Ödenecek: 0 ₺</div>
-  <div id="topIsletme">İşletmelerden Alınacak: 0 ₺</div>
+  <div class="summary-card pay">
+   <div class="summary-icon">🛵</div>
+   <div>
+    <div class="summary-text">Kuryelere Ödenecek</div>
+    <div class="summary-amount" id="topKurye">0 ₺</div>
+   </div>
+  </div>
+
+  <div class="summary-card get">
+   <div class="summary-icon">🍕</div>
+   <div>
+    <div class="summary-text">İşletmelerden Alınacak</div>
+    <div class="summary-amount" id="topIsletme">0 ₺</div>
+   </div>
+  </div>
  </div>
 </div>
 
@@ -111,29 +146,28 @@ function icon(v){ if(v>0) return "red"; if(v<0) return "blue"; return "green" }
 
 function ekle(type,ad,p,u){
  if(!ad) return alert("İsim gir")
- p=+p||0; u=+u||0
- data[type].push({ad,paket:p,tutar:p*u})
+ data[type].push({ad,paket:+p||0,tutar:(+p||0)*(+u||0)})
  save()
 }
 
-function sil(type,i,gunluk){
+function sil(type,i,g){
  if(confirm("Silinsin mi?")){
-  gunluk?data[type].splice(i,1):devir[type].splice(i,1)
+  g?data[type].splice(i,1):devir[type].splice(i,1)
   save()
  }
 }
 
-function duzenle(type,i,gunluk){
- let arr=gunluk?data[type]:devir[type]
- let t=prompt("Yeni tutar",arr[i].tutar)
- if(t!==null){arr[i].tutar=+t||0;save()}
+function duzenle(type,i,g){
+ let a=g?data[type]:devir[type]
+ let t=prompt("Yeni tutar",a[i].tutar)
+ if(t!==null){a[i].tutar=+t||0;save()}
 }
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let map={}
-  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
-  Object.entries(map).forEach(([ad,top])=>{
+  let m={}
+  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
+  Object.entries(m).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad)
    d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
@@ -147,28 +181,24 @@ function odemeGir(){
  let ad=odemeAd.value
  let tutar=+odemeTutar.value
  if(!ad||!tutar) return alert("Eksik bilgi")
-
  let d=devir[tip].find(x=>x.ad===ad)
  if(d) d.tutar=Math.max(0,d.tutar-tutar)
-
  odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip,ad,tutar})
  save()
 }
 
-function tablo(type,arr,gunluk){
+function tablo(type,arr,g){
  return `<table>
- <tr>
- <th></th><th>Ad</th>${gunluk?"<th>Paket</th>":""}<th>Tutar</th><th>İşlem</th>
- </tr>
+ <tr><th></th><th>Ad</th>${g?"<th>Paket</th>":""}<th>Tutar</th><th>İşlem</th></tr>
  ${arr.map((x,i)=>`
  <tr>
  <td><span class="icon ${icon(x.tutar)}"></span></td>
  <td>${x.ad}</td>
- ${gunluk?`<td>${x.paket}</td>`:""}
+ ${g?`<td>${x.paket}</td>`:""}
  <td>${x.tutar}</td>
  <td class="actions">
-  <button onclick="duzenle('${type}',${i},${gunluk})">✏️</button>
-  <button onclick="sil('${type}',${i},${gunluk})">🗑️</button>
+  <button onclick="duzenle('${type}',${i},${g})">✏️</button>
+  <button onclick="sil('${type}',${i},${g})">🗑️</button>
  </td>
  </tr>`).join("")}
  </table>`
@@ -182,7 +212,7 @@ function tabloOdeme(){
  </table>`
 }
 
-function excelAktar(){ alert("Excel hazır değil, yarın devam 👍") }
+function excelAktar(){ alert("Excel yarın 👍") }
 
 function render(){
  kurye.innerHTML=`
@@ -209,13 +239,11 @@ function render(){
  <b>Devir</b>${tablo("isletme",devir.isletme,false)}
 `
 
- let topK=devir.kurye.reduce((a,b)=>a+b.tutar,0)
- let topI=devir.isletme.reduce((a,b)=>a+b.tutar,0)
- topKurye.innerText="Kuryelere Ödenecek: "+topK+" ₺"
- topIsletme.innerText="İşletmelerden Alınacak: "+topI+" ₺"
+ topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
 
  odemeAd.innerHTML=""
- new Set([...devir[odemeTip.value]].map(x=>x.ad))
+ new Set(devir[odemeTip.value].map(x=>x.ad))
  .forEach(a=>odemeAd.add(new Option(a,a)))
 
  odemeTablo.innerHTML=tabloOdeme()
