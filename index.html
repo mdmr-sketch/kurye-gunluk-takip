@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 body{background:#0f172a;color:#e5e7eb;font-family:sans-serif;padding:10px}
 input,select,button{padding:8px;border:none;border-radius:6px;margin:2px 0}
@@ -56,7 +56,7 @@ th,td{padding:6px;border-bottom:1px solid #334155;text-align:center}
 
  <div class="summary">
   <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
-  <div class="summary-card get">İşletmelerden: <b id="topIsletme">0 ₺</b></div>
+  <div class="summary-card get">İşletmelerden: <b id="topIsletme">0 ₺</div>
  </div>
 </div>
 
@@ -69,7 +69,6 @@ th,td{padding:6px;border-bottom:1px solid #334155;text-align:center}
 </div>
 
 <script>
-let today=new Date().toLocaleDateString("tr-TR")
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
 let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
@@ -87,7 +86,7 @@ function tab(x){
 function ekle(t,a,p,u){
  if(!a) return alert("İsim gir")
  p=+p; u=+u
- data[t].push({ad:a,paket:p,ucret:u,tutar:p*u,gun:today})
+ data[t].push({ad:a,paket:p,ucret:u,tutar:p*u,gun:new Date().toLocaleDateString()})
  lastValues[t]={paket:p,ucret:u}
  save()
 }
@@ -112,36 +111,28 @@ function odemeGir(){
  if(!a||!tu) return
  let d=devir[t].find(x=>x.ad===a)
  if(d)d.tutar=Math.max(0,d.tutar-tu)
- odemeler.push({tarih:today,tip:t,ad:a,tutar:tu})
+ odemeler.push({tarih:new Date().toLocaleDateString(),tip:t,ad:a,tutar:tu})
  save()
 }
 
-// ===== ÇALIŞAN EXCEL =====
 function excelAktar(){
  let wb=XLSX.utils.book_new()
 
- // Günlük sayfaları
+ // Günlük işlemler ayrı sayfa
  ["kurye","isletme"].forEach(t=>{
-   let arr=data[t].filter(x=>x.gun===today).map(x=>({
-     Ad:x.ad,
-     Paket:x.paket,
-     Ücret:x.ucret,
-     Toplam:x.tutar,
-     Devir: (devir[t].find(d=>d.ad===x.ad)?.tutar || 0),
-     Ödeme: odemeler.filter(o=>o.tip===t && o.ad===x.ad && o.tarih===today).reduce((s,o)=>s+o.tutar,0)
-   }))
+   let arr=data[t].map(x=>({Ad:x.ad,Paket:x.paket,Ücret:x.ucret,Toplam:x.tutar}))
    let ws=XLSX.utils.json_to_sheet(arr)
    XLSX.utils.book_append_sheet(wb,ws,"GÜNLÜK_"+t.toUpperCase())
  })
 
- // Devir sayfası
+ // Devir ayrı sayfa
  let devirRows=[]
  devir.kurye.forEach(x=>devirRows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
  devir.isletme.forEach(x=>devirRows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
  let wsDevir=XLSX.utils.json_to_sheet(devirRows)
  XLSX.utils.book_append_sheet(wb,wsDevir,"DEViR")
 
- XLSX.writeFile(wb,"kurye_takip_"+new Date().toISOString().slice(0,10)+".xlsx")
+ XLSX.writeFile(wb,"kurye_takip.xlsx")
 }
 
 function render(){
