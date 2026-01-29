@@ -28,11 +28,11 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .logo{text-align:center;font-size:48px;margin-bottom:6px}
 .input-row{display:flex;gap:6px;flex-wrap:wrap}
 .input-row input{flex:1}
+.actions button{margin:0 2px}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .summary-card{background:#020617;padding:12px;border-radius:14px}
 .pay{border-left:4px solid var(--red)}
 .get{border-left:4px solid var(--green)}
-.actions button{margin:0 2px}
 </style>
 </head>
 
@@ -124,6 +124,20 @@ function excelAktar(){
  XLSX.writeFile(wb,"kurye_takip.xlsx")
 }
 
+function duzenle(t,i){
+ let y=prompt("Yeni tutar",devir[t][i].tutar)
+ if(y!==null){
+  devir[t][i].tutar=Number(y)||0
+  save()
+ }
+}
+function sil(t,i){
+ if(confirm("Silinsin mi?")){
+  devir[t].splice(i,1)
+  save()
+ }
+}
+
 function render(){
  kurye.innerHTML=`
  <div class="card">
@@ -137,8 +151,16 @@ function render(){
 
  <b>Kurye Devir</b>
  <table>
- <tr><th>Ad</th><th>Tutar</th></tr>
- ${devir.kurye.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
+ <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
+ ${devir.kurye.map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td class="actions">
+   <button class="small" onclick="duzenle('kurye',${i})">✏️</button>
+   <button class="small" onclick="sil('kurye',${i})">🗑️</button>
+  </td>
+ </tr>`).join("")}
  </table>
  `
 
@@ -154,8 +176,16 @@ function render(){
 
  <b>İşletme Devir</b>
  <table>
- <tr><th>Ad</th><th>Tutar</th></tr>
- ${devir.isletme.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
+ <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
+ ${devir.isletme.map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td class="actions">
+   <button class="small" onclick="duzenle('isletme',${i})">✏️</button>
+   <button class="small" onclick="sil('isletme',${i})">🗑️</button>
+  </td>
+ </tr>`).join("")}
  </table>
  `
 
