@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
 <style>
 :root{
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
@@ -37,6 +35,8 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .input-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .input-group input{flex:1;min-width:80px}
 .input-group button{flex:none}
+.flex-btns{display:flex;gap:10px;margin-bottom:10px}
+.flex-btns button{flex:1;padding:10px;font-weight:bold}
 </style>
 </head>
 <body>
@@ -68,14 +68,17 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <b>Ödeme Geçmişi</b>
 <div id="odemeTablo"></div>
 
-<button onclick="gunSonu()">GÜN SONU AL</button>
-<button onclick="excelAktar()">📤 EXCEL AKTAR</button>
+<div class="flex-btns">
+ <button onclick="gunSonu()">GÜN SONU AL</button>
+ <button onclick="excelAktar()">📤 EXCEL AKTAR</button>
+</div>
 
 <script>
 let today=new Date().toLocaleDateString("tr-TR")
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
 let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
+let lastValues={kurye:{paket:'',ucret:''},isletme:{paket:'',ucret:''}}
 
 function save(){localStorage.setItem("takip",JSON.stringify(data));localStorage.setItem("devir",JSON.stringify(devir));localStorage.setItem("odemeler",JSON.stringify(odemeler));render()}
 
@@ -88,15 +91,21 @@ function tab(x){
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
 }
 
-function ekle(t,a,p,u){if(!a)return alert("İsim gir"); data[t].push({ad:a,paket:+p,tutar:+p*+u,gun:today}); save()}
+function ekle(t,a,p,u){
+ if(!a) return alert("İsim gir")
+ p=+p; u=+u
+ data[t].push({ad:a,paket:p,tutar:p*u,gun:today})
+ lastValues[t]={paket:p,ucret:u}
+ save()
+}
 
 function sil(t,i){if(confirm("Silinsin mi?")){data[t].splice(i,1);save()}}
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let map={}
-  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
-  Object.entries(map).forEach(([ad,top])=>{
+  let m={}
+  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
+  Object.entries(m).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad)
    d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
@@ -114,46 +123,36 @@ function odemeGir(){
  save()
 }
 
+// Excel aktarma
 function excelAktar(){
- let wb=XLSX.utils.book_new();
- let rows=[]
- devir.kurye.forEach(x=>rows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
- devir.isletme.forEach(x=>rows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows,{header:["Tip","Ad","Tutar"]}),"DEViRLER")
- 
- // Günlük ayrı sayfada
- let kuryeMap={}
- data.kurye.filter(x=>x.gun===today).forEach(x=>{
-   if(!kuryeMap[x.ad]) kuryeMap[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
-   kuryeMap[x.ad].paket+=x.paket
-   kuryeMap[x.ad].ucret+=x.tutar/(x.paket||1)
-   kuryeMap[x.ad].toplam+=x.tutar
- })
- devir.kurye.forEach(d=>{if(kuryeMap[d.ad]) kuryeMap[d.ad].devir=d.tutar})
- odemeler.filter(o=>o.tip==="kurye").forEach(o=>{if(kuryeMap[o.ad]) kuryeMap[o.ad].odeme+=o.tutar})
- let kuryeRows=[]
- Object.entries(kuryeMap).forEach(([ad,val])=>{
-   kuryeRows.push({Ad:ad,"Paket Sayısı":val.paket,"Paket Ücreti":val.ucret,"Toplam Günlük":val.toplam,"Devirden Alacak":val.devir,"Yapılan Ödeme":val.odeme})
- })
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kuryeRows),"GÜNLÜK_KURYE")
+ let wb=XLSX.utils.book_new()
+ let devirSheet=[]
+ devir.kurye.forEach(x=>devirSheet.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
+ devir.isletme.forEach(x=>devirSheet.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirSheet),"DEViRLER")
 
- let isletmeMap={}
- data.isletme.filter(x=>x.gun===today).forEach(x=>{
-   if(!isletmeMap[x.ad]) isletmeMap[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
-   isletmeMap[x.ad].paket+=x.paket
-   isletmeMap[x.ad].ucret+=x.tutar/(x.paket||1)
-   isletmeMap[x.ad].toplam+=x.tutar
- })
- devir.isletme.forEach(d=>{if(isletmeMap[d.ad]) isletmeMap[d.ad].devir=d.tutar})
- odemeler.filter(o=>o.tip==="isletme").forEach(o=>{if(isletmeMap[o.ad]) isletmeMap[o.ad].odeme+=o.tutar})
- let isletmeRows=[]
- Object.entries(isletmeMap).forEach(([ad,val])=>{
-   isletmeRows.push({Ad:ad,"Paket Sayısı":val.paket,"Paket Ücreti":val.ucret,"Toplam Günlük":val.toplam,"Devir Borcu":val.devir,"Yapılan Ödeme":val.odeme})
- })
+ // Günlük ayrı sayfa
+ function prepareMap(arr,t){
+  let map={}
+  arr.filter(x=>x.gun===today).forEach(x=>{
+   if(!map[x.ad]) map[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
+   map[x.ad].paket+=x.paket
+   map[x.ad].ucret+=x.tutar/x.paket
+   map[x.ad].toplam+=x.tutar
+  })
+  devir[t].forEach(d=>{if(map[d.ad]) map[d.ad].devir=d.tutar})
+  odemeler.filter(o=>o.tip===t).forEach(o=>{if(map[o.ad]) map[o.ad].odeme+=o.tutar})
+  return map
+ }
+
+ let kuryeRows=[],isletmeRows=[]
+ Object.entries(prepareMap(data.kurye,'kurye')).forEach(([ad,v])=>kuryeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devirden Alacak":v.devir,"Yapılan Ödeme":v.odeme}))
+ Object.entries(prepareMap(data.isletme,'isletme')).forEach(([ad,v])=>isletmeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devir Borcu":v.devir,"Yapılan Ödeme":v.odeme}))
+
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kuryeRows),"GÜNLÜK_KURYE")
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(isletmeRows),"GÜNLÜK_ISLETME")
 
- let tarih=new Date().toISOString().slice(0,10)
- XLSX.writeFile(wb,"kurye_takip_"+tarih+".xlsx")
+ XLSX.writeFile(wb,"kurye_takip_"+new Date().toISOString().slice(0,10)+".xlsx")
 }
 
 function tablo(arr,t){
@@ -176,7 +175,7 @@ function promptDuzenle(t,i){
  let tutar=prompt("Ücret:",item.tutar/item.paket)
  if(ad!==null)item.ad=ad
  if(paket!==null)item.paket=+paket
- if(tutar!==null)item.tutar=+tutar*+paket
+ if(tutar!==null)item.tutar=+tutar*item.paket
  save()
 }
 
@@ -184,9 +183,9 @@ function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-group">
-    <input id="ka" placeholder="Kurye Adı">
-    <input id="kp" type="number" placeholder="Paket">
-    <input id="ku" type="number" placeholder="Ücret">
+    <input id="ka" placeholder="Kurye Adı" value="${lastValues.kurye.paket}">
+    <input id="kp" type="number" placeholder="Paket" value="${lastValues.kurye.paket}">
+    <input id="ku" type="number" placeholder="Ücret" value="${lastValues.kurye.ucret}">
     <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
@@ -196,9 +195,9 @@ function render(){
  isletme.innerHTML=`
  <div class="card">
   <div class="input-group">
-    <input id="ia" placeholder="İşletme Adı">
-    <input id="ip" type="number" placeholder="Paket">
-    <input id="iu" type="number" placeholder="Ücret">
+    <input id="ia" placeholder="İşletme Adı" value="${lastValues.isletme.paket}">
+    <input id="ip" type="number" placeholder="Paket" value="${lastValues.isletme.paket}">
+    <input id="iu" type="number" placeholder="Ücret" value="${lastValues.isletme.ucret}">
     <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
@@ -215,6 +214,5 @@ function render(){
 odemeTip.onchange=render
 render()
 </script>
-
 </body>
 </html>
