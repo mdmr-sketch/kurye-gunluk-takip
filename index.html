@@ -37,6 +37,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .input-group button{flex:none}
 .flex-btns{display:flex;gap:10px;margin-bottom:10px}
 .flex-btns button{flex:1;padding:10px;font-weight:bold}
+#odemeGirBtn{display:block;margin:10px auto;}
 </style>
 </head>
 <body>
@@ -57,7 +58,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  </select>
  <select id="odemeAd"></select>
  <input type="number" id="odemeTutar" placeholder="Tutar">
- <button onclick="odemeGir()">ÖDEME YAP</button>
+ <button id="odemeGirBtn" onclick="odemeGir()">ÖDEME YAP</button>
 
  <div class="summary">
   <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
@@ -126,6 +127,7 @@ function odemeGir(){
 // Excel aktarma
 function excelAktar(){
  let wb=XLSX.utils.book_new()
+ // Devirler
  let devirSheet=[]
  devir.kurye.forEach(x=>devirSheet.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
  devir.isletme.forEach(x=>devirSheet.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
