@@ -25,7 +25,7 @@ button.small{padding:4px 6px;font-size:12px}
 .hidden{display:none}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
-.logo{text-align:center;font-size:48px}
+.logo{text-align:center;font-size:48px;margin-bottom:6px}
 .input-row{display:flex;gap:6px;flex-wrap:wrap}
 .input-row input{flex:1}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -37,7 +37,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 
 <body>
 
-<div class="logo">🛵</div>
+<div id="logo" class="logo">🛵</div>
 
 <div class="tabbar">
  <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
@@ -74,12 +74,12 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 </div>
 
 <script>
-let today = new Date().toISOString().slice(0,10)
-document.getElementById("gunlukTarih").value = today
+let today=new Date().toISOString().slice(0,10)
+gunlukTarih.value=today
 
-let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[],isletme:[]}
-let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[],isletme:[]}
-let odemeler = JSON.parse(localStorage.getItem("odemeler")) || []
+let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
+let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
+let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
@@ -93,18 +93,19 @@ function tab(x){
  isletme.classList.add("hidden")
  tKurye.classList.remove("active")
  tIsletme.classList.remove("active")
+
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+
+ document.getElementById("logo").innerText = x==="kurye" ? "🛵" : "🍕"
 }
 
 function ekle(t,a,p,u){
  if(!a)return
  data[t].push({
-  ad:a,
-  paket:+p,
-  ucret:+u,
+  ad:a,paket:+p,ucret:+u,
   tutar:+p*+u,
-  tarih: document.getElementById("gunlukTarih").value
+  tarih:gunlukTarih.value
  })
  save()
 }
@@ -139,11 +140,17 @@ function excelAktar(){
  XLSX.writeFile(wb,"kurye_takip.xlsx")
 }
 
-function tablo(arr){
- let secili=document.getElementById("gunlukTarih").value
- let f=arr.filter(x=>x.tarih===secili)
+function gunlukTablo(arr){
+ let t=gunlukTarih.value
  return `<table><tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th></tr>`+
- f.map(x=>`<tr><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td></tr>`).join("")+
+ arr.filter(x=>x.tarih===t).map(x=>`
+ <tr><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td></tr>`).join("")+
+ `</table>`
+}
+
+function devirTablo(arr){
+ return `<table><tr><th>Ad</th><th>Tutar</th></tr>`+
+ arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")+
  `</table>`
 }
 
@@ -157,9 +164,9 @@ function render(){
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>${tablo(data.kurye)}
- <b>Devir</b>${tablo(devir.kurye)}
- `
+ <b>Günlük</b>${gunlukTablo(data.kurye)}
+ <b>Devir</b>${devirTablo(devir.kurye)}
+`
 
  isletme.innerHTML=`
  <div class="card">
@@ -170,16 +177,17 @@ function render(){
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>${tablo(data.isletme)}
- <b>Devir</b>${tablo(devir.isletme)}
- `
+ <b>Günlük</b>${gunlukTablo(data.isletme)}
+ <b>Devir</b>${devirTablo(devir.isletme)}
+`
 
  topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
  topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
+
  odemeAd.innerHTML=""
  new Set(devir[odemeTip.value].map(x=>x.ad)).forEach(a=>odemeAd.add(new Option(a,a)))
 }
-document.getElementById("gunlukTarih").onchange=render
+gunlukTarih.onchange=render
 render()
 </script>
 </body>
