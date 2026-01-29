@@ -32,6 +32,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .summary-card{background:#020617;padding:12px;border-radius:14px}
 .pay{border-left:4px solid var(--red)}
 .get{border-left:4px solid var(--green)}
+.actions button{margin:0 2px}
 </style>
 </head>
 
@@ -48,7 +49,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="isletme" class="hidden"></div>
 
 <div class="card">
- <b>📅 Günlük Tarih Filtresi</b>
+ <b>📅 Günlük Tarih</b>
  <input type="date" id="gunlukTarih">
 </div>
 
@@ -93,21 +94,45 @@ function tab(x){
  isletme.classList.add("hidden")
  tKurye.classList.remove("active")
  tIsletme.classList.remove("active")
-
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
-
- document.getElementById("logo").innerText = x==="kurye" ? "🛵" : "🍕"
+ logo.innerText = x==="kurye"?"🛵":"🍕"
 }
 
 function ekle(t,a,p,u){
  if(!a)return
- data[t].push({
-  ad:a,paket:+p,ucret:+u,
-  tutar:+p*+u,
-  tarih:gunlukTarih.value
- })
+ data[t].push({ad:a,paket:+p,ucret:+u,tutar:+p*+u,tarih:gunlukTarih.value})
  save()
+}
+
+function silGunlukIsletme(i){
+ if(confirm("Silinsin mi?")){
+  data.isletme.splice(i,1)
+  save()
+ }
+}
+
+function duzenleGunlukIsletme(i){
+ let y=prompt("Yeni toplam tutar",data.isletme[i].tutar)
+ if(y!==null){
+  data.isletme[i].tutar=+y
+  save()
+ }
+}
+
+function silDevirIsletme(i){
+ if(confirm("Devir silinsin mi?")){
+  devir.isletme.splice(i,1)
+  save()
+ }
+}
+
+function duzenleDevirIsletme(i){
+ let y=prompt("Yeni devir tutarı",devir.isletme[i].tutar)
+ if(y!==null){
+  devir.isletme[i].tutar=+y
+  save()
+ }
 }
 
 function gunSonu(){
@@ -128,7 +153,6 @@ function odemeGir(){
  if(!a||!tu)return
  let d=devir[t].find(x=>x.ad===a)
  if(d)d.tutar=Math.max(0,d.tutar-tu)
- odemeler.push({tarih:new Date().toLocaleDateString("tr-TR"),tip:t,ad:a,tutar:tu})
  save()
 }
 
@@ -138,20 +162,6 @@ function excelAktar(){
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME")
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([...devir.kurye,...devir.isletme]),"DEVIR")
  XLSX.writeFile(wb,"kurye_takip.xlsx")
-}
-
-function gunlukTablo(arr){
- let t=gunlukTarih.value
- return `<table><tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th></tr>`+
- arr.filter(x=>x.tarih===t).map(x=>`
- <tr><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td></tr>`).join("")+
- `</table>`
-}
-
-function devirTablo(arr){
- return `<table><tr><th>Ad</th><th>Tutar</th></tr>`+
- arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")+
- `</table>`
 }
 
 function render(){
@@ -164,8 +174,6 @@ function render(){
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>${gunlukTablo(data.kurye)}
- <b>Devir</b>${devirTablo(devir.kurye)}
 `
 
  isletme.innerHTML=`
@@ -177,9 +185,33 @@ function render(){
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>${gunlukTablo(data.isletme)}
- <b>Devir</b>${devirTablo(devir.isletme)}
-`
+
+ <b>Günlük</b>
+ <table>
+ <tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>
+ ${data.isletme.filter(x=>x.tarih===gunlukTarih.value).map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
+  <td class="actions">
+   <button class="small" onclick="duzenleGunlukIsletme(${i})">✏️</button>
+   <button class="small" onclick="silGunlukIsletme(${i})">🗑️</button>
+  </td>
+ </tr>`).join("")}
+ </table>
+
+ <b>Devir</b>
+ <table>
+ <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
+ ${devir.isletme.map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td><td>${x.tutar}</td>
+  <td class="actions">
+   <button class="small" onclick="duzenleDevirIsletme(${i})">✏️</button>
+   <button class="small" onclick="silDevirIsletme(${i})">🗑️</button>
+  </td>
+ </tr>`).join("")}
+ </table>
+ `
 
  topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
  topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
