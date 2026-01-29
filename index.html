@@ -119,13 +119,13 @@ function odemeGir(){
 function excelAktar(){
  let wb=XLSX.utils.book_new()
 
- // DEViR
+ // DEViR SAYFASI
  let devirRows=[]
  devir.kurye.forEach(x=>devirRows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
  devir.isletme.forEach(x=>devirRows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirRows),"DEViR")
 
- // GÜNLÜK
+ // GÜNLÜK SAYFALARI
  function prepare(arr,t){
   let map={}
   arr.forEach(x=>{
@@ -151,9 +151,10 @@ function excelAktar(){
  XLSX.writeFile(wb,"kurye_takip_"+new Date().toISOString().slice(0,10)+".xlsx")
 }
 
-function tablo(arr,t){
- return `<table><tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>`+
- arr.map((x,i)=>`<tr>
+function render(){
+ function tablo(arr,t){
+  return `<table><tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>`+
+  arr.map((x,i)=>`<tr>
 <td>${x.ad}</td>
 <td>${x.paket||0}</td>
 <td>${x.ucret||0}</td>
@@ -162,22 +163,21 @@ function tablo(arr,t){
 <button class="small" onclick="promptDuzenle('${t}',${i})">✏️</button>
 <button class="small" onclick="sil('${t}',${i})">🗑</button>
 </td></tr>`).join("")+
-`</table>`
-}
+  `</table>`
+ }
 
-function promptDuzenle(t,i){
- let item=data[t][i]
- let ad=prompt("İsim:",item.ad)
- let paket=prompt("Paket:",item.paket)
- let ucret=prompt("Ücret:",item.ucret)
- if(ad!==null)item.ad=ad
- if(paket!==null)item.paket=+paket
- if(ucret!==null)item.ucret=+ucret
- item.tutar=item.paket*item.ucret
- save()
-}
+ function promptDuzenle(t,i){
+  let item=data[t][i]
+  let ad=prompt("İsim:",item.ad)
+  let paket=prompt("Paket:",item.paket)
+  let ucret=prompt("Ücret:",item.ucret)
+  if(ad!==null)item.ad=ad
+  if(paket!==null)item.paket=+paket
+  if(ucret!==null)item.ucret=+ucret
+  item.tutar=item.paket*item.ucret
+  save()
+ }
 
-function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-group">
@@ -190,6 +190,7 @@ function render(){
  <b>Günlük</b>${tablo(data.kurye,'kurye')}
  <b>Devir</b>${tablo(devir.kurye,'kurye')}
  `
+
  isletme.innerHTML=`
  <div class="card">
   <div class="input-group">
@@ -202,6 +203,7 @@ function render(){
  <b>Günlük</b>${tablo(data.isletme,'isletme')}
  <b>Devir</b>${tablo(devir.isletme,'isletme')}
  `
+
  topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
  topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
  odemeAd.innerHTML=""
