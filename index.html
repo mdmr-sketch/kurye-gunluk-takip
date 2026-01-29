@@ -10,7 +10,6 @@
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
  --blue:#3b82f6;--red:#ef4444;--green:#22c55e;--text:#e5e7eb
 }
-*{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
 input,select,button{padding:8px;border:none;border-radius:6px}
 input,select{background:var(--soft);color:#fff;width:100%;margin-bottom:6px}
@@ -24,13 +23,8 @@ button.small{padding:2px 6px;font-size:12px;margin:0 2px}
 .hidden{display:none}
 table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px;table-layout:fixed}
 th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
-.icon{width:8px;height:8px;border-radius:50%;display:inline-block}
-.red{background:var(--red)}.blue{background:var(--blue)}.green{background:var(--green)}
 .actions{display:flex;justify-content:center}
-.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.summary-card{background:#020617;padding:12px;border-radius:14px}
-.pay{border-left:4px solid var(--red)}
-.get{border-left:4px solid var(--green)}
+.actions button{margin:0 2px;padding:2px 6px;font-size:12px}
 .logo{text-align:center;font-size:48px;margin:5px 0}
 .input-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .input-group input{flex:1;min-width:80px}
@@ -38,6 +32,10 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .flex-btns{display:flex;gap:10px;margin-bottom:10px}
 .flex-btns button{flex:1;padding:10px;font-weight:bold}
 #odemeGirBtn{display:block;margin:10px auto;}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.summary-card{background:#020617;padding:12px;border-radius:14px}
+.pay{border-left:4px solid var(--red)}
+.get{border-left:4px solid var(--green)}
 </style>
 </head>
 <body>
@@ -95,7 +93,7 @@ function tab(x){
 function ekle(t,a,p,u){
  if(!a) return alert("İsim gir")
  p=+p; u=+u
- data[t].push({ad:a,paket:p,tutar:p*u,gun:today})
+ data[t].push({ad:a,paket:p,ucret:u,tutar:p*u,gun:today})
  lastValues[t]={paket:p,ucret:u}
  save()
 }
@@ -104,9 +102,9 @@ function sil(t,i){if(confirm("Silinsin mi?")){data[t].splice(i,1);save()}}
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let m={}
-  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
-  Object.entries(m).forEach(([ad,top])=>{
+  let map={}
+  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
+  Object.entries(map).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad)
    d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
@@ -124,32 +122,35 @@ function odemeGir(){
  save()
 }
 
-// Excel aktarma
+// Excel Aktarımı (GÜNLÜK + DEViR)
 function excelAktar(){
  let wb=XLSX.utils.book_new()
- // Devirler
- let devirSheet=[]
- devir.kurye.forEach(x=>devirSheet.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
- devir.isletme.forEach(x=>devirSheet.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirSheet),"DEViRLER")
 
- // Günlük ayrı sayfa
- function prepareMap(arr,t){
+ // DEViR SAYFASI
+ let devirRows=[]
+ devir.kurye.forEach(x=>devirRows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
+ devir.isletme.forEach(x=>devirRows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirRows),"DEViR")
+
+ // GÜNLÜK SAYFASI
+ function prepare(arr,t){
   let map={}
-  arr.filter(x=>x.gun===today).forEach(x=>{
-   if(!map[x.ad]) map[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
-   map[x.ad].paket+=x.paket
-   map[x.ad].ucret+=x.tutar/x.paket
-   map[x.ad].toplam+=x.tutar
+  arr.forEach(x=>{
+   if(x.gun===today){
+    if(!map[x.ad]) map[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
+    map[x.ad].paket+=x.paket
+    map[x.ad].ucret+=x.ucret
+    map[x.ad].toplam+=x.tutar
+   }
   })
   devir[t].forEach(d=>{if(map[d.ad]) map[d.ad].devir=d.tutar})
-  odemeler.filter(o=>o.tip===t).forEach(o=>{if(map[o.ad]) map[o.ad].odeme+=o.tutar})
+  odemeler.filter(o=>o.tip===t && o.tarih===today).forEach(o=>{if(map[o.ad]) map[o.ad].odeme+=o.tutar})
   return map
  }
 
  let kuryeRows=[],isletmeRows=[]
- Object.entries(prepareMap(data.kurye,'kurye')).forEach(([ad,v])=>kuryeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devirden Alacak":v.devir,"Yapılan Ödeme":v.odeme}))
- Object.entries(prepareMap(data.isletme,'isletme')).forEach(([ad,v])=>isletmeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devir Borcu":v.devir,"Yapılan Ödeme":v.odeme}))
+ Object.entries(prepare(data.kurye,'kurye')).forEach(([ad,v])=>kuryeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devirden Alacak":v.devir,"Yapılan Ödeme":v.odeme}))
+ Object.entries(prepare(data.isletme,'isletme')).forEach(([ad,v])=>isletmeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devir Borcu":v.devir,"Yapılan Ödeme":v.odeme}))
 
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kuryeRows),"GÜNLÜK_KURYE")
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(isletmeRows),"GÜNLÜK_ISLETME")
@@ -158,10 +159,11 @@ function excelAktar(){
 }
 
 function tablo(arr,t){
- return `<table><tr><th>Ad</th><th>Paket</th><th>Tutar</th><th>İşlem</th></tr>`+
+ return `<table><tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>`+
  arr.map((x,i)=>`<tr>
 <td>${x.ad}</td>
 <td>${x.paket||0}</td>
+<td>${x.ucret||0}</td>
 <td>${x.tutar||0}</td>
 <td class="actions">
 <button class="small" onclick="promptDuzenle('${t}',${i})">✏️</button>
@@ -174,10 +176,11 @@ function promptDuzenle(t,i){
  let item=data[t][i]
  let ad=prompt("İsim:",item.ad)
  let paket=prompt("Paket:",item.paket)
- let tutar=prompt("Ücret:",item.tutar/item.paket)
+ let ucret=prompt("Ücret:",item.ucret)
  if(ad!==null)item.ad=ad
  if(paket!==null)item.paket=+paket
- if(tutar!==null)item.tutar=+tutar*item.paket
+ if(ucret!==null)item.ucret=+ucret
+ item.tutar=item.paket*item.ucret
  save()
 }
 
@@ -185,7 +188,7 @@ function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-group">
-    <input id="ka" placeholder="Kurye Adı" value="${lastValues.kurye.paket}">
+    <input id="ka" placeholder="Kurye Adı" value="">
     <input id="kp" type="number" placeholder="Paket" value="${lastValues.kurye.paket}">
     <input id="ku" type="number" placeholder="Ücret" value="${lastValues.kurye.ucret}">
     <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
@@ -197,7 +200,7 @@ function render(){
  isletme.innerHTML=`
  <div class="card">
   <div class="input-group">
-    <input id="ia" placeholder="İşletme Adı" value="${lastValues.isletme.paket}">
+    <input id="ia" placeholder="İşletme Adı" value="">
     <input id="ip" type="number" placeholder="Paket" value="${lastValues.isletme.paket}">
     <input id="iu" type="number" placeholder="Ücret" value="${lastValues.isletme.ucret}">
     <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
