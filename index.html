@@ -8,8 +8,8 @@
 
 <style>
 :root{
-  --bg:#0f172a; --card:#1e293b; --soft:#334155;
-  --blue:#3b82f6; --red:#ef4444; --green:#22c55e; --text:#e5e7eb;
+ --bg:#0f172a;--card:#1e293b;--soft:#334155;
+ --blue:#3b82f6;--red:#ef4444;--green:#22c55e;--text:#e5e7eb
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
@@ -49,11 +49,6 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="isletme" class="hidden"></div>
 
 <div class="card">
- <b>📅 Günlük Tarih</b>
- <input type="date" id="gunlukTarih">
-</div>
-
-<div class="card">
  <b>💳 ÖDEME</b>
  <select id="odemeTip">
   <option value="kurye">Kurye</option>
@@ -75,17 +70,12 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 </div>
 
 <script>
-let today=new Date().toISOString().slice(0,10)
-gunlukTarih.value=today
-
 let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
 let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
-let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[]
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
  localStorage.setItem("devir",JSON.stringify(devir))
- localStorage.setItem("odemeler",JSON.stringify(odemeler))
  render()
 }
 
@@ -96,43 +86,13 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- logo.innerText = x==="kurye"?"🛵":"🍕"
+ logo.innerText=x==="kurye"?"🛵":"🍕"
 }
 
 function ekle(t,a,p,u){
  if(!a)return
- data[t].push({ad:a,paket:+p,ucret:+u,tutar:+p*+u,tarih:gunlukTarih.value})
+ data[t].push({ad:a,paket:+p,ucret:+u,tutar:+p*+u})
  save()
-}
-
-function silGunlukIsletme(i){
- if(confirm("Silinsin mi?")){
-  data.isletme.splice(i,1)
-  save()
- }
-}
-
-function duzenleGunlukIsletme(i){
- let y=prompt("Yeni toplam tutar",data.isletme[i].tutar)
- if(y!==null){
-  data.isletme[i].tutar=+y
-  save()
- }
-}
-
-function silDevirIsletme(i){
- if(confirm("Devir silinsin mi?")){
-  devir.isletme.splice(i,1)
-  save()
- }
-}
-
-function duzenleDevirIsletme(i){
- let y=prompt("Yeni devir tutarı",devir.isletme[i].tutar)
- if(y!==null){
-  devir.isletme[i].tutar=+y
-  save()
- }
 }
 
 function gunSonu(){
@@ -174,7 +134,13 @@ function render(){
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
-`
+
+ <b>Kurye Devir</b>
+ <table>
+ <tr><th>Ad</th><th>Tutar</th></tr>
+ ${devir.kurye.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
+ </table>
+ `
 
  isletme.innerHTML=`
  <div class="card">
@@ -186,30 +152,10 @@ function render(){
   </div>
  </div>
 
- <b>Günlük</b>
+ <b>İşletme Devir</b>
  <table>
- <tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>
- ${data.isletme.filter(x=>x.tarih===gunlukTarih.value).map((x,i)=>`
- <tr>
-  <td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
-  <td class="actions">
-   <button class="small" onclick="duzenleGunlukIsletme(${i})">✏️</button>
-   <button class="small" onclick="silGunlukIsletme(${i})">🗑️</button>
-  </td>
- </tr>`).join("")}
- </table>
-
- <b>Devir</b>
- <table>
- <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
- ${devir.isletme.map((x,i)=>`
- <tr>
-  <td>${x.ad}</td><td>${x.tutar}</td>
-  <td class="actions">
-   <button class="small" onclick="duzenleDevirIsletme(${i})">✏️</button>
-   <button class="small" onclick="silDevirIsletme(${i})">🗑️</button>
-  </td>
- </tr>`).join("")}
+ <tr><th>Ad</th><th>Tutar</th></tr>
+ ${devir.isletme.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")}
  </table>
  `
 
@@ -219,7 +165,6 @@ function render(){
  odemeAd.innerHTML=""
  new Set(devir[odemeTip.value].map(x=>x.ad)).forEach(a=>odemeAd.add(new Option(a,a)))
 }
-gunlukTarih.onchange=render
 render()
 </script>
 </body>
