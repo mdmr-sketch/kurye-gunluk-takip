@@ -116,37 +116,39 @@ function odemeGir(){
  save()
 }
 
+// ===== ÇALIŞAN EXCEL =====
 function excelAktar(){
  let wb=XLSX.utils.book_new()
 
- // DEViR SAYFASI
+ function prepareDaily(t){
+   let map={}
+   data[t].forEach(x=>{if(x.gun===today){map[x.ad]=map[x.ad]||{paket:0,ucret:0,toplam:0,devir:0,odeme:0};map[x.ad].paket+=x.paket;map[x.ad].ucret+=x.ucret;map[x.ad].toplam+=x.tutar}})
+   devir[t].forEach(d=>{if(map[d.ad]) map[d.ad].devir=d.tutar})
+   odemeler.filter(o=>o.tip===t && o.tarih===today).forEach(o=>{if(map[o.ad]) map[o.ad].odeme+=o.tutar})
+   return map
+ }
+
+ function sheetFromMap(map,headerNames){
+   let rows=[]
+   Object.entries(map).forEach(([ad,v])=>{
+     let row={Ad:ad}
+     headerNames.forEach(h=>{
+       row[h]=v[h]!==undefined?v[h]:0
+     })
+     rows.push(row)
+   })
+   return XLSX.utils.json_to_sheet(rows)
+ }
+
+ let kuryeSheet=sheetFromMap(prepareDaily('kurye'),["paket","ucret","toplam","devir","odeme"])
+ let isletmeSheet=sheetFromMap(prepareDaily('isletme'),["paket","ucret","toplam","devir","odeme"])
+ XLSX.utils.book_append_sheet(wb,kuryeSheet,"GÜNLÜK_KURYE")
+ XLSX.utils.book_append_sheet(wb,isletmeSheet,"GÜNLÜK_ISLETME")
+
  let devirRows=[]
  devir.kurye.forEach(x=>devirRows.push({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar}))
  devir.isletme.forEach(x=>devirRows.push({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devirRows),"DEViR")
-
- // GÜNLÜK SAYFALARI
- function prepare(arr,t){
-  let map={}
-  arr.forEach(x=>{
-   if(x.gun===today){
-    if(!map[x.ad]) map[x.ad]={paket:0,ucret:0,toplam:0,devir:0,odeme:0}
-    map[x.ad].paket+=x.paket
-    map[x.ad].ucret+=x.ucret
-    map[x.ad].toplam+=x.tutar
-   }
-  })
-  devir[t].forEach(d=>{if(map[d.ad]) map[d.ad].devir=d.tutar})
-  odemeler.filter(o=>o.tip===t && o.tarih===today).forEach(o=>{if(map[o.ad]) map[o.ad].odeme+=o.tutar})
-  return map
- }
-
- let kuryeRows=[],isletmeRows=[]
- Object.entries(prepare(data.kurye,'kurye')).forEach(([ad,v])=>kuryeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devirden Alacak":v.devir,"Yapılan Ödeme":v.odeme}))
- Object.entries(prepare(data.isletme,'isletme')).forEach(([ad,v])=>isletmeRows.push({Ad:ad,"Paket Sayısı":v.paket,"Paket Ücreti":v.ucret,"Toplam Günlük":v.toplam,"Devir Borcu":v.devir,"Yapılan Ödeme":v.odeme}))
-
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(kuryeRows),"GÜNLÜK_KURYE")
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(isletmeRows),"GÜNLÜK_ISLETME")
 
  XLSX.writeFile(wb,"kurye_takip_"+new Date().toISOString().slice(0,10)+".xlsx")
 }
