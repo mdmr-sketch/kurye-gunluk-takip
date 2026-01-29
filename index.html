@@ -36,6 +36,8 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 .get{border-left:4px solid var(--green);}
 .input-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
 .input-row input{flex:1;}
+.payment-container{display:flex;flex-direction:column;gap:6px;}
+.payment-container button{width:100%;}
 </style>
 </head>
 <body>
@@ -50,7 +52,7 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 <div id="kurye"></div>
 <div id="isletme" class="hidden"></div>
 
-<div class="card">
+<div class="card payment-container">
  <b>💳 ÖDEME</b>
  <select id="odemeTip">
   <option value="kurye">Kurye</option>
@@ -58,7 +60,7 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
  </select>
  <select id="odemeAd"></select>
  <input type="number" id="odemeTutar" placeholder="Tutar">
- <button style="width:100%;" onclick="odemeGir()">ÖDEME YAP</button>
+ <button onclick="odemeGir()">ÖDEME YAP</button>
 
  <div class="summary">
   <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
@@ -100,7 +102,8 @@ function ekle(type, ad, paket, ucret){
  if(!ad) return alert("İsim gir");
  lastInputs[type] = {paket, ucret};
  paket = Number(paket)||0; ucret = Number(ucret)||0;
- data[type].push({ad, paket, ucret, tutar: paket*ucret});
+ let tutar = paket*ucret;
+ data[type].push({ad, paket, ucret, tutar, tarih:new Date().toLocaleDateString()});
  save();
 }
 
@@ -130,13 +133,11 @@ function gunSonu(){
 function excelAktar(){
  let wb=XLSX.utils.book_new();
 
- // Günlük sayfalar
- let gunluk_kurye = data.kurye.map(x=>({Ad:x.ad, Paket:x.paket, Ucret:x.ucret, Toplam:x.tutar}));
- let gunluk_isletme = data.isletme.map(x=>({Ad:x.ad, Paket:x.paket, Ucret:x.ucret, Toplam:x.tutar}));
+ let gunluk_kurye = data.kurye.map(x=>({Tarih:x.tarih, Ad:x.ad, Paket:x.paket, Ucret:x.ucret, Toplam:x.tutar}));
+ let gunluk_isletme = data.isletme.map(x=>({Tarih:x.tarih, Ad:x.ad, Paket:x.paket, Ucret:x.ucret, Toplam:x.tutar}));
  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gunluk_kurye), "GUNLUK_KURYE");
  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gunluk_isletme), "GUNLUK_ISLETME");
 
- // Devir sayfaları
  let devir_rows = [];
  devir.kurye.forEach(x=> devir_rows.push({Tip:"Kurye", Ad:x.ad, Tutar:x.tutar}));
  devir.isletme.forEach(x=> devir_rows.push({Tip:"Isletme", Ad:x.ad, Tutar:x.tutar}));
@@ -145,11 +146,11 @@ function excelAktar(){
  XLSX.writeFile(wb, "kurye_takip.xlsx");
 }
 
-function tablo(arr){
+function tabloGunluk(arr){
  return `<table>
- <tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>`+
+ <tr><th>Tarih</th><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th><th>İşlem</th></tr>`+
  arr.map((x,i)=>`<tr>
- <td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
+ <td>${x.tarih}</td><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
  <td>
  <button class="small" onclick="promptDuzenle(${i},'${x.ad}','${x.tutar}')">✏️</button>
  <button class="small" onclick="sil(${i})">🗑️</button>
@@ -174,6 +175,7 @@ function sil(i){
 }
 
 function render(){
+ // Kurye
  kurye.innerHTML=`
  <div class="card">
   <div class="input-row">
@@ -183,9 +185,12 @@ function render(){
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
- <b>Devir</b>${tablo(devir.kurye)}
- `;
+ <b>Günlük Kayıtlar</b>${tabloGunluk(data.kurye)}
+ <b>Devir</b><table><tr><th>Ad</th><th>Toplam</th></tr>`+
+ devir.kurye.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join('')+
+ `</table>`;
 
+ // Isletme
  isletme.innerHTML=`
  <div class="card">
   <div class="input-row">
@@ -195,8 +200,10 @@ function render(){
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
- <b>Devir</b>${tablo(devir.isletme)}
- `;
+ <b>Günlük Kayıtlar</b>${tabloGunluk(data.isletme)}
+ <b>Devir</b><table><tr><th>Ad</th><th>Toplam</th></tr>`+
+ devir.isletme.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join('')+
+ `</table>`;
 
  topKurye.innerText = devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
  topIsletme.innerText = devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
