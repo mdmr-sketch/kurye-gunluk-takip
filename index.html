@@ -38,8 +38,8 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 
 <body>
 
-<!-- 🔐 ŞİFRE EKRANI -->
-<div id="login" class="card">
+<!-- 🔐 ŞİFRE -->
+<div id="login" class="card hidden">
  <h3>🔐 Giriş</h3>
  <input type="password" id="sifre" placeholder="Şifre">
  <button onclick="giris()">GİRİŞ</button>
@@ -81,21 +81,28 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 </div>
 
 <script>
-const DOGRU_SIFRE = "1234";
+const DOGRU_SIFRE="1234";
 
-function giris(){
- if(sifre.value === DOGRU_SIFRE){
-  login.classList.add("hidden");
-  app.classList.remove("hidden");
- }else{
-  alert("Şifre yanlış");
- }
+/* 🔐 KALICI GİRİŞ */
+if(localStorage.getItem("login")==="ok"){
+ login.classList.add("hidden");
+ app.classList.remove("hidden");
+}else{
+ login.classList.remove("hidden");
 }
 
-let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[], isletme:[]};
-let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[], isletme:[]};
-let odemeler = JSON.parse(localStorage.getItem("odemeler")) || [];
-let last = {kurye:{paket:'',ucret:''}, isletme:{paket:'',ucret:''}};
+function giris(){
+ if(sifre.value===DOGRU_SIFRE){
+  localStorage.setItem("login","ok");
+  login.classList.add("hidden");
+  app.classList.remove("hidden");
+ }else alert("Şifre yanlış");
+}
+
+let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]};
+let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]};
+let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[];
+let last={kurye:{paket:'',ucret:''},isletme:{paket:'',ucret:''}};
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data));
@@ -111,90 +118,108 @@ function tab(x){
  tIsletme.classList.remove("active");
  document.getElementById(x).classList.remove("hidden");
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active");
- logo.innerText = x==="kurye"?"🛵":"🍕";
+ logo.innerText=x==="kurye"?"🛵":"🍕";
 }
 
-function ekle(t,ad,p,u){
- if(!ad)return;
+function ekle(t,a,p,u){
+ if(!a)return;
  last[t]={paket:p,ucret:u};
- data[t].push({ad,paket:+p,ucret:+u,tutar:+p*+u});
+ data[t].push({ad:a,paket:+p,ucret:+u,tutar:+p*+u});
  save();
+}
+
+/* ✏️🗑 GÜNLÜK */
+function gunlukDuzenle(t,i){
+ let p=prompt("Paket",data[t][i].paket);
+ let u=prompt("Ücret",data[t][i].ucret);
+ if(p!==null&&u!==null){
+  data[t][i].paket=+p;
+  data[t][i].ucret=+u;
+  data[t][i].tutar=+p*+u;
+  save();
+ }
+}
+function gunlukSil(t,i){
+ if(confirm("Silinsin mi?")){
+  data[t].splice(i,1);
+  save();
+ }
+}
+
+/* 🔁 DEVİR */
+function devirDuzenle(t,i){
+ let y=prompt("Yeni tutar",devir[t][i].tutar);
+ if(y!==null){devir[t][i].tutar=+y;save();}
+}
+function devirSil(t,i){
+ if(confirm("Silinsin mi?")){devir[t].splice(i,1);save();}
 }
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
   let m={};
   data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar);
-  Object.entries(m).forEach(([ad,top])=>{
-   let d=devir[t].find(x=>x.ad===ad);
-   d?d.tutar+=top:devir[t].push({ad,tutar:top});
+  Object.entries(m).forEach(([a,top])=>{
+   let d=devir[t].find(x=>x.ad===a);
+   d?d.tutar+=top:devir[t].push({ad:a,tutar:top});
   });
   data[t]=[];
  });
  save();
 }
 
-function devirDuzenle(t,i){
- let yeni = prompt("Yeni tutar", devir[t][i].tutar);
- if(yeni!==null){
-  devir[t][i].tutar = Number(yeni)||0;
-  save();
- }
+function excelAktar(){
+ let wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"GUNLUK_KURYE");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([...devir.kurye,...devir.isletme]),"DEVIR");
+ XLSX.writeFile(wb,"kurye_takip.xlsx");
 }
 
-function devirSil(t,i){
- if(confirm("Silinsin mi?")){
-  devir[t].splice(i,1);
-  save();
- }
-}
-
-function tablo(arr,devirMi,t){
+function tablo(arr,t,g){
  return `<table>
  <tr>
-  <th>Ad</th>${devirMi?'':'<th>Paket</th><th>Ücret</th>'}
-  <th>Tutar</th>${devirMi?'<th>İşlem</th>':''}
+ <th>Ad</th>${g?'':'<th>Paket</th><th>Ücret</th>'}<th>Tutar</th><th>İşlem</th>
  </tr>`+
  arr.map((x,i)=>`<tr>
-  <td>${x.ad}</td>
-  ${devirMi?'':`<td>${x.paket}</td><td>${x.ucret}</td>`}
-  <td>${x.tutar}</td>
-  ${devirMi?`<td class="actions">
-   <button class="small" onclick="devirDuzenle('${t}',${i})">✏️</button>
-   <button class="small" onclick="devirSil('${t}',${i})">🗑️</button>
-  </td>`:''}
- </tr>`).join("")+`</table>`;
+ <td>${x.ad}</td>
+ ${g?'':`<td>${x.paket}</td><td>${x.ucret}</td>`}
+ <td>${x.tutar}</td>
+ <td class="actions">
+ <button class="small" onclick="${g?'devir':'gunluk'}Duzenle('${t}',${i})">✏️</button>
+ <button class="small" onclick="${g?'devir':'gunluk'}Sil('${t}',${i})">🗑️</button>
+ </td></tr>`).join("")+`</table>`;
 }
 
 function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-row">
-   <input id="ka" placeholder="Kurye Adı">
+   <input id="ka" placeholder="Kurye">
    <input id="kp" type="number" placeholder="Paket" value="${last.kurye.paket}">
    <input id="ku" type="number" placeholder="Ücret" value="${last.kurye.ucret}">
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
- <b>📋 Günlük</b>${tablo(data.kurye,false,'kurye')}
- <b>🔁 Devir</b>${tablo(devir.kurye,true,'kurye')}
- `;
+ <b>📋 Günlük</b>${tablo(data.kurye,'kurye',false)}
+ <b>🔁 Devir</b>${tablo(devir.kurye,'kurye',true)}
+`;
 
  isletme.innerHTML=`
  <div class="card">
   <div class="input-row">
-   <input id="ia" placeholder="İşletme Adı">
+   <input id="ia" placeholder="İşletme">
    <input id="ip" type="number" placeholder="Paket" value="${last.isletme.paket}">
    <input id="iu" type="number" placeholder="Ücret" value="${last.isletme.ucret}">
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
- <b>📋 Günlük</b>${tablo(data.isletme,false,'isletme')}
- <b>🔁 Devir</b>${tablo(devir.isletme,true,'isletme')}
- `;
+ <b>📋 Günlük</b>${tablo(data.isletme,'isletme',false)}
+ <b>🔁 Devir</b>${tablo(devir.isletme,'isletme',true)}
+`;
 
- topKurye.innerText = devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
- topIsletme.innerText = devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
+ topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
+ topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
 
  odemeAd.innerHTML="";
  new Set(devir[odemeTip.value].map(x=>x.ad))
