@@ -41,8 +41,8 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 <div class="logo" id="logo">🛵</div>
 
 <div class="tabbar">
- <button class="active" onclick="tab('kurye')">🛵 KURYELER</button>
- <button onclick="tab('isletme')">🍕 İŞLETMELER</button>
+ <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
+ <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
 </div>
 
 <div id="kurye"></div>
@@ -50,6 +50,14 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 
 <div class="card">
  <b>💳 ÖDEME</b>
+ <select id="odemeTip">
+  <option value="kurye">Kurye</option>
+  <option value="isletme">İşletme</option>
+ </select>
+ <select id="odemeAd"></select>
+ <input type="number" id="odemeTutar" placeholder="Tutar">
+ <button style="width:100%;" onclick="odemeGir()">ÖDEME YAP</button>
+
  <div class="summary">
   <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
   <div class="summary-card get">İşletmelerden: <b id="topIsletme">0 ₺</b></div>
@@ -61,18 +69,21 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
  <button style="flex:1;" onclick="excelAktar()">📊 EXCEL AKTAR</button>
 </div>
 
+<div class="footer-buttons">
+ <button style="flex:1;background:#16a34a;" onclick="yedekAl()">📥 YEDEK AL</button>
+ <button style="flex:1;background:#dc2626;" onclick="document.getElementById('yedekDosya').click()">📤 YEDEK YÜKLE</button>
+ <input type="file" id="yedekDosya" hidden onchange="yedekYukle(event)">
+</div>
+
 <script>
 let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[], isletme:[]};
 let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[], isletme:[]};
-
-let lastInput = {
- kurye:{paket:"",ucret:""},
- isletme:{paket:"",ucret:""}
-};
+let odemeler = JSON.parse(localStorage.getItem("odemeler")) || [];
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data));
  localStorage.setItem("devir",JSON.stringify(devir));
+ localStorage.setItem("odemeler",JSON.stringify(odemeler));
  render();
 }
 
@@ -83,19 +94,18 @@ function tab(x){
  logo.innerText = x==="kurye" ? "🛵" : "🍕";
 }
 
-function ekle(t,ad,p,u){
+function ekle(type, ad, paket, ucret){
  if(!ad) return;
- lastInput[t]={paket:p,ucret:u};
- p=+p||0; u=+u||0;
- data[t].push({ad,paket:p,ucret:u,tutar:p*u});
+ paket=+paket||0; ucret=+ucret||0;
+ data[type].push({ad,paket,ucret,tutar:paket*ucret});
  save();
 }
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let map={};
-  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar);
-  Object.entries(map).forEach(([ad,top])=>{
+  let m={};
+  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar);
+  Object.entries(m).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad);
    d?d.tutar+=top:devir[t].push({ad,tutar:top});
   });
@@ -104,20 +114,33 @@ function gunSonu(){
  save();
 }
 
-function tabloGunluk(arr){
- if(!arr.length) return "<i>Günlük kayıt yok</i>";
- return `<table>
- <tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Toplam</th></tr>`+
- arr.map(x=>`<tr>
- <td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
- </tr>`).join("")+"</table>";
+function duzenle(tip,i){
+ let v=prompt("Yeni tutar",devir[tip][i].tutar);
+ if(v!==null){
+  devir[tip][i].tutar=+v||0;
+  save();
+ }
+}
+function sil(tip,i){
+ if(confirm("Silinsin mi?")){
+  devir[tip].splice(i,1);
+  save();
+ }
 }
 
-function tabloDevir(arr){
- if(!arr.length) return "<i>Devir yok</i>";
+function tablo(arr,tip){
  return `<table>
- <tr><th>Ad</th><th>Tutar</th></tr>`+
- arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")+"</table>";
+ <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>`+
+ arr.map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td>
+   <button class="small" onclick="duzenle('${tip}',${i})">✏️</button>
+   <button class="small" onclick="sil('${tip}',${i})">🗑️</button>
+  </td>
+ </tr>`).join("")+
+ `</table>`;
 }
 
 function excelAktar(){
@@ -135,41 +158,49 @@ function excelAktar(){
  XLSX.writeFile(wb,"kurye_takip.xlsx");
 }
 
+function yedekAl(){
+ let b=new Blob([JSON.stringify({data,devir,odemeler})],{type:"application/json"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(b);
+ a.download="kurye_takip_yedek.json";
+ a.click();
+}
+
+function yedekYukle(e){
+ let r=new FileReader();
+ r.onload=()=>{
+  let y=JSON.parse(r.result);
+  data=y.data; devir=y.devir; odemeler=y.odemeler;
+  save();
+ };
+ r.readAsText(e.target.files[0]);
+}
+
 function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-row">
    <input id="ka" placeholder="Kurye Adı">
-   <input id="kp" type="number" placeholder="Paket" value="${lastInput.kurye.paket}">
-   <input id="ku" type="number" placeholder="Ücret" value="${lastInput.kurye.ucret}">
+   <input id="kp" type="number" placeholder="Paket">
+   <input id="ku" type="number" placeholder="Ücret">
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>
- ${tabloGunluk(data.kurye)}
  <b>Devir</b>
- ${tabloDevir(devir.kurye)}
+ ${tablo(devir.kurye,"kurye")}
  `;
-
  isletme.innerHTML=`
  <div class="card">
   <div class="input-row">
    <input id="ia" placeholder="İşletme Adı">
-   <input id="ip" type="number" placeholder="Paket" value="${lastInput.isletme.paket}">
-   <input id="iu" type="number" placeholder="Ücret" value="${lastInput.isletme.ucret}">
+   <input id="ip" type="number" placeholder="Paket">
+   <input id="iu" type="number" placeholder="Ücret">
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
- <b>Günlük</b>
- ${tabloGunluk(data.isletme)}
  <b>Devir</b>
- ${tabloDevir(devir.isletme)}
+ ${tablo(devir.isletme,"isletme")}
  `;
-
- topKurye.innerText =
-  devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
- topIsletme.innerText =
-  devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
 }
 render();
 </script>
