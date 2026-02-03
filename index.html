@@ -22,11 +22,9 @@ button.small{padding:4px 6px;font-size:12px;}
 .tabbar{display:flex;gap:6px;margin-bottom:10px;}
 .tabbar button{flex:1;padding:10px;font-weight:bold;}
 .active{background:var(--blue);}
-.passive{background:var(--soft);}
 .hidden{display:none;}
 table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
 th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
-.actions button{margin:0 2px;}
 .logo{text-align:center;font-size:48px;margin:5px 0;}
 .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
 .summary-card{background:#020617;padding:12px;border-radius:14px;}
@@ -44,7 +42,7 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 
 <div class="tabbar">
  <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
- <button id="tIsletme" class="passive" onclick="tab('isletme')">🍕 İŞLETMELER</button>
+ <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
 </div>
 
 <div id="kurye"></div>
@@ -66,9 +64,6 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
  </div>
 </div>
 
-<b>Ödeme Geçmişi</b>
-<div id="odemeTablo"></div>
-
 <div class="footer-buttons">
  <button class="warn" style="flex:1;" onclick="gunSonu()">GÜN SONU AL</button>
  <button style="flex:1;" onclick="excelAktar()">📊 EXCEL AKTAR</button>
@@ -84,7 +79,6 @@ th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
 let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[], isletme:[]};
 let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[], isletme:[]};
 let odemeler = JSON.parse(localStorage.getItem("odemeler")) || [];
-let lastInputs = {kurye:{paket:'',ucret:''}, isletme:{paket:'',ucret:''}};
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data));
@@ -96,16 +90,12 @@ function save(){
 function tab(x){
  kurye.classList.add("hidden");
  isletme.classList.add("hidden");
- tKurye.classList.remove("active");
- tIsletme.classList.remove("active");
  document.getElementById(x).classList.remove("hidden");
- document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active");
  logo.innerText = x==="kurye" ? "🛵" : "🍕";
 }
 
 function ekle(type, ad, paket, ucret){
- if(!ad) return alert("İsim gir");
- lastInputs[type]={paket,ucret};
+ if(!ad) return;
  paket=+paket||0; ucret=+ucret||0;
  data[type].push({ad,paket,ucret,tutar:paket*ucret});
  save();
@@ -124,36 +114,66 @@ function gunSonu(){
  save();
 }
 
+function duzenle(tip,i){
+ let v=prompt("Yeni tutar",devir[tip][i].tutar);
+ if(v!==null){
+  devir[tip][i].tutar=+v||0;
+  save();
+ }
+}
+function sil(tip,i){
+ if(confirm("Silinsin mi?")){
+  devir[tip].splice(i,1);
+  save();
+ }
+}
+
+function tablo(arr,tip){
+ return `<table>
+ <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>`+
+ arr.map((x,i)=>`
+ <tr>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td>
+   <button class="small" onclick="duzenle('${tip}',${i})">✏️</button>
+   <button class="small" onclick="sil('${tip}',${i})">🗑️</button>
+  </td>
+ </tr>`).join("")+
+ `</table>`;
+}
+
 function excelAktar(){
  let wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"GUNLUK_KURYE");
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME");
- let dev=[...devir.kurye.map(x=>({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar})),
-          ...devir.isletme.map(x=>({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))];
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(dev),"DEVIR");
+ XLSX.utils.book_append_sheet(
+  wb,
+  XLSX.utils.json_to_sheet([
+   ...devir.kurye.map(x=>({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar})),
+   ...devir.isletme.map(x=>({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))
+  ]),
+  "DEVIR"
+ );
  XLSX.writeFile(wb,"kurye_takip.xlsx");
 }
 
 function yedekAl(){
- let blob=new Blob([JSON.stringify({data,devir,odemeler})],{type:"application/json"});
+ let b=new Blob([JSON.stringify({data,devir,odemeler})],{type:"application/json"});
  let a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
+ a.href=URL.createObjectURL(b);
  a.download="kurye_takip_yedek.json";
  a.click();
 }
 
 function yedekYukle(e){
- let f=e.target.files[0];
- if(!f) return;
  let r=new FileReader();
  r.onload=()=>{
   let y=JSON.parse(r.result);
-  data=y.data||{kurye:[],isletme:[]};
-  devir=y.devir||{kurye:[],isletme:[]};
-  odemeler=y.odemeler||[];
+  data=y.data; devir=y.devir; odemeler=y.odemeler;
   save();
  };
- r.readAsText(f);
+ r.readAsText(e.target.files[0]);
 }
 
 function render(){
@@ -167,9 +187,8 @@ function render(){
   </div>
  </div>
  <b>Devir</b>
- ${tablo(devir.kurye)}
+ ${tablo(devir.kurye,"kurye")}
  `;
-
  isletme.innerHTML=`
  <div class="card">
   <div class="input-row">
@@ -180,16 +199,8 @@ function render(){
   </div>
  </div>
  <b>Devir</b>
- ${tablo(devir.isletme)}
+ ${tablo(devir.isletme,"isletme")}
  `;
-
- topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
- topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
-}
-function tablo(arr){
- return `<table><tr><th>Ad</th><th>Tutar</th></tr>`+
- arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")+
- `</table>`;
 }
 render();
 </script>
