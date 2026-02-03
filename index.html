@@ -3,105 +3,199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye Paneli</title>
+<title>Kurye & İşletme Takip</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-/* ===== ŞİFRE EKRANI ===== */
-#loginScreen {
-    position: fixed;
-    inset: 0;
-    background: #111;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
+:root{
+ --bg:#0f172a;--card:#1e293b;--soft:#334155;
+ --blue:#3b82f6;--red:#ef4444;--green:#22c55e;--text:#e5e7eb
 }
-
-.login-box {
-    background: #1e1e1e;
-    padding: 30px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 320px;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(0,0,0,.6);
-}
-
-.login-box h2 {
-    color: #fff;
-    margin-bottom: 15px;
-}
-
-.login-box input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border: none;
-    font-size: 16px;
-}
-
-.login-box button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    background: #ff9800;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.login-error {
-    color: #ff5252;
-    margin-top: 10px;
-    display: none;
-}
-
-/* ===== ANA UYGULAMA ===== */
-#app {
-    display: none;
-}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
+button,input,select{padding:8px;border:none;border-radius:8px;margin:4px 0}
+input,select{background:var(--soft);color:#fff}
+button{background:var(--blue);color:#fff;font-weight:bold}
+button.warn{background:#facc15;color:#000}
+button.small{padding:4px 6px;font-size:12px}
+.card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px}
+.tabbar{display:flex;gap:6px;margin-bottom:10px}
+.tabbar button{flex:1}
+.active{background:var(--blue)}
+.hidden{display:none}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
+.logo{text-align:center;font-size:48px;margin:5px 0}
+.actions button{background:#475569;margin:0 2px}
+.input-row{display:flex;gap:6px;flex-wrap:wrap}
+.input-row input{flex:1}
 </style>
 </head>
 
 <body>
 
-<!-- 🔐 ŞİFRE EKRANI -->
-<div id="loginScreen">
-    <div class="login-box">
-        <h2>Giriş</h2>
-        <input type="password" id="password" placeholder="Şifre">
-        <button onclick="login()">GİRİŞ</button>
-        <div class="login-error" id="error">Hatalı şifre</div>
-    </div>
+<div class="logo" id="logo">🛵</div>
+
+<div class="tabbar">
+ <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
+ <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
 </div>
 
-<!-- 🚚 ANA UYGULAMA -->
-<div id="app">
+<div id="kurye"></div>
+<div id="isletme" class="hidden"></div>
 
-<!-- 🔽 BURAYA SENİN ESKİ KODUNU AYNEN YAPIŞTIR 🔽 -->
+<div class="card">
+ <b>💳 ÖDEME</b>
+ <select id="odemeTip" onchange="render()">
+  <option value="kurye">Kurye</option>
+  <option value="isletme">İşletme</option>
+ </select>
+ <select id="odemeAd"></select>
+ <input type="number" id="odemeTutar" placeholder="Tutar">
+ <button onclick="odemeGir()">ÖDEME YAP</button>
+</div>
 
+<div style="display:flex;gap:6px">
+ <button class="warn" style="flex:1" onclick="gunSonu()">GÜN SONU AL</button>
+ <button style="flex:1" onclick="excelAktar()">📤 EXCEL AKTAR</button>
 </div>
 
 <script>
-const PASSWORD = "1234"; // 🔑 BURADAN ŞİFREYİ DEĞİŞTİR
+let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
+let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
+let last={kurye:{p:'',u:''},isletme:{p:'',u:''}}
 
-function login() {
-    const input = document.getElementById("password").value;
-    if (input === PASSWORD) {
-        sessionStorage.setItem("loggedIn", "true");
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("app").style.display = "block";
-    } else {
-        document.getElementById("error").style.display = "block";
-    }
+function save(){
+ localStorage.setItem("takip",JSON.stringify(data))
+ localStorage.setItem("devir",JSON.stringify(devir))
+ render()
 }
 
-window.onload = () => {
-    // Sekme kapatılınca tekrar şifre sorsun
-    sessionStorage.removeItem("loggedIn");
-};
-</script>
+function tab(x){
+ kurye.classList.add("hidden")
+ isletme.classList.add("hidden")
+ tKurye.classList.remove("active")
+ tIsletme.classList.remove("active")
+ document.getElementById(x).classList.remove("hidden")
+ document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
+ logo.innerText = x==="kurye" ? "🛵" : "🍕"
+}
 
+function ekle(t,a,p,u){
+ if(!a)return alert("İsim gir")
+ last[t]={p,u}
+ p=+p||0;u=+u||0
+ data[t].push({ad:a,paket:p,ucret:u,tutar:p*u})
+ save()
+}
+
+function silGunluk(t,i){
+ if(confirm("Silinsin mi?")){
+  data[t].splice(i,1)
+  save()
+ }
+}
+
+function duzenleGunluk(t,i){
+ let v=prompt("Yeni tutar",data[t][i].tutar)
+ if(v!==null){
+  data[t][i].tutar=+v||0
+  save()
+ }
+}
+
+function silDevir(t,i){
+ if(confirm("Silinsin mi?")){
+  devir[t].splice(i,1)
+  save()
+ }
+}
+
+function gunSonu(){
+ ["kurye","isletme"].forEach(t=>{
+  let map={}
+  data[t].forEach(x=>map[x.ad]=(map[x.ad]||0)+x.tutar)
+  Object.entries(map).forEach(([ad,top])=>{
+   let d=devir[t].find(x=>x.ad===ad)
+   d?d.tutar+=top:devir[t].push({ad,tutar:top})
+  })
+  data[t]=[]
+ })
+ save()
+}
+
+function odemeGir(){
+ let t=odemeTip.value,a=odemeAd.value,tu=+odemeTutar.value
+ if(!a||!tu)return
+ let d=devir[t].find(x=>x.ad===a)
+ if(d)d.tutar=Math.max(0,d.tutar-tu)
+ save()
+}
+
+function excelAktar(){
+ let wb=XLSX.utils.book_new()
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"Gunluk_Kurye")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"Gunluk_Isletme")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devir.kurye),"Devir_Kurye")
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(devir.isletme),"Devir_Isletme")
+ XLSX.writeFile(wb,"kurye_takip.xlsx")
+}
+
+function tabloGunluk(t){
+ return `<table>
+ <tr><th>Ad</th><th>Paket</th><th>Ücret</th><th>Tutar</th><th></th></tr>`+
+ data[t].map((x,i)=>`
+ <tr>
+ <td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td>
+ <td class="actions">
+  <button class="small" onclick="duzenleGunluk('${t}',${i})">✏️</button>
+  <button class="small" onclick="silGunluk('${t}',${i})">🗑️</button>
+ </td></tr>`).join("")+"</table>"
+}
+
+function tabloDevir(t){
+ return `<table>
+ <tr><th>Ad</th><th>Tutar</th><th></th></tr>`+
+ devir[t].map((x,i)=>`
+ <tr>
+ <td>${x.ad}</td><td>${x.tutar}</td>
+ <td class="actions">
+  <button class="small" onclick="silDevir('${t}',${i})">🗑️</button>
+ </td></tr>`).join("")+"</table>"
+}
+
+function render(){
+ kurye.innerHTML=`
+ <div class="card">
+  <div class="input-row">
+   <input id="ka" placeholder="Kurye Adı">
+   <input id="kp" type="number" placeholder="Paket" value="${last.kurye.p}">
+   <input id="ku" type="number" placeholder="Ücret" value="${last.kurye.u}">
+   <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
+  </div>
+ </div>
+ <b>Günlük</b>${tabloGunluk("kurye")}
+ <b>Devir</b>${tabloDevir("kurye")}
+`
+
+ isletme.innerHTML=`
+ <div class="card">
+  <div class="input-row">
+   <input id="ia" placeholder="İşletme Adı">
+   <input id="ip" type="number" placeholder="Paket" value="${last.isletme.p}">
+   <input id="iu" type="number" placeholder="Ücret" value="${last.isletme.u}">
+   <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
+  </div>
+ </div>
+ <b>Günlük</b>${tabloGunluk("isletme")}
+ <b>Devir</b>${tabloDevir("isletme")}
+`
+
+ odemeAd.innerHTML=""
+ new Set(devir[odemeTip.value].map(x=>x.ad))
+  .forEach(a=>odemeAd.add(new Option(a,a)))
+}
+render()
+</script>
 </body>
 </html>
