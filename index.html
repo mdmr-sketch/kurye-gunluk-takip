@@ -8,41 +8,43 @@
 
 <style>
 :root{
- --bg:#0f172a;--card:#1e293b;--soft:#334155;
- --blue:#3b82f6;--red:#ef4444;--green:#22c55e;--text:#e5e7eb
+  --bg:#0f172a; --card:#1e293b; --soft:#334155;
+  --blue:#3b82f6; --red:#ef4444; --green:#22c55e; --text:#e5e7eb;
 }
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px}
-input,select,button{border:none;border-radius:8px;padding:8px;margin:4px 0}
-input,select{background:var(--soft);color:#fff}
-button{background:var(--blue);color:#fff;font-weight:bold}
-button.warn{background:#facc15;color:#000}
-button.small{padding:4px 6px;font-size:12px}
-.card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px}
-.tabbar{display:flex;gap:6px;margin-bottom:10px}
-.tabbar button{flex:1}
-.active{background:var(--blue)}
-.hidden{display:none}
-table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
-th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
-.logo{text-align:center;font-size:48px;margin-bottom:6px}
-.input-row{display:flex;gap:6px;flex-wrap:wrap}
-.input-row input{flex:1}
-.actions button{margin:0 2px}
-.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.summary-card{background:#020617;padding:12px;border-radius:14px}
-.pay{border-left:4px solid var(--red)}
-.get{border-left:4px solid var(--green)}
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:sans-serif;padding:10px;}
+input, select, button{border:none;border-radius:8px;padding:8px;margin:4px 0;}
+input, select{background:var(--soft);color:#fff;}
+button{background:var(--blue);color:#fff;font-weight:bold;}
+button.warn{background:#facc15;color:#000;}
+button.small{padding:4px 6px;font-size:12px;}
+.card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px;}
+.tabbar{display:flex;gap:6px;margin-bottom:10px;}
+.tabbar button{flex:1;padding:10px;font-weight:bold;}
+.active{background:var(--blue);}
+.passive{background:var(--soft);}
+.hidden{display:none;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+th, td{padding:6px;border-bottom:1px solid var(--soft);text-align:center;}
+.actions button{margin:0 2px;}
+.logo{text-align:center;font-size:48px;margin:5px 0;}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.summary-card{background:#020617;padding:12px;border-radius:14px;}
+.pay{border-left:4px solid var(--red);}
+.get{border-left:4px solid var(--green);}
+.input-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.input-row input{flex:1;}
+.footer-buttons{display:flex;gap:6px;margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<div id="logo" class="logo">🛵</div>
+<div class="logo" id="logo">🛵</div>
 
 <div class="tabbar">
  <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
- <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
+ <button id="tIsletme" class="passive" onclick="tab('isletme')">🍕 İŞLETMELER</button>
 </div>
 
 <div id="kurye"></div>
@@ -56,7 +58,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  </select>
  <select id="odemeAd"></select>
  <input type="number" id="odemeTutar" placeholder="Tutar">
- <button onclick="odemeGir()">ÖDEME YAP</button>
+ <button style="width:100%;" onclick="odemeGir()">ÖDEME YAP</button>
 
  <div class="summary">
   <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
@@ -64,138 +66,133 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  </div>
 </div>
 
-<div style="display:flex;gap:6px">
- <button class="warn" style="flex:1" onclick="gunSonu()">GÜN SONU AL</button>
- <button style="flex:1" onclick="excelAktar()">📤 EXCEL AKTAR</button>
+<b>Ödeme Geçmişi</b>
+<div id="odemeTablo"></div>
+
+<div class="footer-buttons">
+ <button class="warn" style="flex:1;" onclick="gunSonu()">GÜN SONU AL</button>
+ <button style="flex:1;" onclick="excelAktar()">📊 EXCEL AKTAR</button>
+</div>
+
+<div class="footer-buttons">
+ <button style="flex:1;background:#16a34a;" onclick="yedekAl()">📥 YEDEK AL</button>
+ <button style="flex:1;background:#dc2626;" onclick="document.getElementById('yedekDosya').click()">📤 YEDEK YÜKLE</button>
+ <input type="file" id="yedekDosya" hidden onchange="yedekYukle(event)">
 </div>
 
 <script>
-let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
-let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
+let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[], isletme:[]};
+let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[], isletme:[]};
+let odemeler = JSON.parse(localStorage.getItem("odemeler")) || [];
+let lastInputs = {kurye:{paket:'',ucret:''}, isletme:{paket:'',ucret:''}};
 
 function save(){
- localStorage.setItem("takip",JSON.stringify(data))
- localStorage.setItem("devir",JSON.stringify(devir))
- render()
+ localStorage.setItem("takip",JSON.stringify(data));
+ localStorage.setItem("devir",JSON.stringify(devir));
+ localStorage.setItem("odemeler",JSON.stringify(odemeler));
+ render();
 }
 
 function tab(x){
- kurye.classList.add("hidden")
- isletme.classList.add("hidden")
- tKurye.classList.remove("active")
- tIsletme.classList.remove("active")
- document.getElementById(x).classList.remove("hidden")
- document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- logo.innerText=x==="kurye"?"🛵":"🍕"
+ kurye.classList.add("hidden");
+ isletme.classList.add("hidden");
+ tKurye.classList.remove("active");
+ tIsletme.classList.remove("active");
+ document.getElementById(x).classList.remove("hidden");
+ document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active");
+ logo.innerText = x==="kurye" ? "🛵" : "🍕";
 }
 
-function ekle(t,a,p,u){
- if(!a)return
- data[t].push({ad:a,paket:+p,ucret:+u,tutar:+p*+u})
- save()
+function ekle(type, ad, paket, ucret){
+ if(!ad) return alert("İsim gir");
+ lastInputs[type]={paket,ucret};
+ paket=+paket||0; ucret=+ucret||0;
+ data[type].push({ad,paket,ucret,tutar:paket*ucret});
+ save();
 }
 
 function gunSonu(){
  ["kurye","isletme"].forEach(t=>{
-  let m={}
-  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
+  let m={};
+  data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar);
   Object.entries(m).forEach(([ad,top])=>{
-   let d=devir[t].find(x=>x.ad===ad)
-   d?d.tutar+=top:devir[t].push({ad,tutar:top})
-  })
-  data[t]=[]
- })
- save()
-}
-
-function odemeGir(){
- let t=odemeTip.value,a=odemeAd.value,tu=+odemeTutar.value
- if(!a||!tu)return
- let d=devir[t].find(x=>x.ad===a)
- if(d)d.tutar=Math.max(0,d.tutar-tu)
- save()
+   let d=devir[t].find(x=>x.ad===ad);
+   d?d.tutar+=top:devir[t].push({ad,tutar:top});
+  });
+  data[t]=[];
+ });
+ save();
 }
 
 function excelAktar(){
- let wb=XLSX.utils.book_new()
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"GUNLUK_KURYE")
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME")
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([...devir.kurye,...devir.isletme]),"DEVIR")
- XLSX.writeFile(wb,"kurye_takip.xlsx")
+ let wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"GUNLUK_KURYE");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME");
+ let dev=[...devir.kurye.map(x=>({Tip:"Kurye",Ad:x.ad,Tutar:x.tutar})),
+          ...devir.isletme.map(x=>({Tip:"İşletme",Ad:x.ad,Tutar:x.tutar}))];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(dev),"DEVIR");
+ XLSX.writeFile(wb,"kurye_takip.xlsx");
 }
 
-function duzenle(t,i){
- let y=prompt("Yeni tutar",devir[t][i].tutar)
- if(y!==null){
-  devir[t][i].tutar=Number(y)||0
-  save()
- }
+function yedekAl(){
+ let blob=new Blob([JSON.stringify({data,devir,odemeler})],{type:"application/json"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="kurye_takip_yedek.json";
+ a.click();
 }
-function sil(t,i){
- if(confirm("Silinsin mi?")){
-  devir[t].splice(i,1)
-  save()
- }
+
+function yedekYukle(e){
+ let f=e.target.files[0];
+ if(!f) return;
+ let r=new FileReader();
+ r.onload=()=>{
+  let y=JSON.parse(r.result);
+  data=y.data||{kurye:[],isletme:[]};
+  devir=y.devir||{kurye:[],isletme:[]};
+  odemeler=y.odemeler||[];
+  save();
+ };
+ r.readAsText(f);
 }
 
 function render(){
  kurye.innerHTML=`
  <div class="card">
   <div class="input-row">
-   <input id="ka" placeholder="Kurye">
+   <input id="ka" placeholder="Kurye Adı">
    <input id="kp" type="number" placeholder="Paket">
    <input id="ku" type="number" placeholder="Ücret">
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
-
- <b>Kurye Devir</b>
- <table>
- <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
- ${devir.kurye.map((x,i)=>`
- <tr>
-  <td>${x.ad}</td>
-  <td>${x.tutar}</td>
-  <td class="actions">
-   <button class="small" onclick="duzenle('kurye',${i})">✏️</button>
-   <button class="small" onclick="sil('kurye',${i})">🗑️</button>
-  </td>
- </tr>`).join("")}
- </table>
- `
+ <b>Devir</b>
+ ${tablo(devir.kurye)}
+ `;
 
  isletme.innerHTML=`
  <div class="card">
   <div class="input-row">
-   <input id="ia" placeholder="İşletme">
+   <input id="ia" placeholder="İşletme Adı">
    <input id="ip" type="number" placeholder="Paket">
    <input id="iu" type="number" placeholder="Ücret">
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
+ <b>Devir</b>
+ ${tablo(devir.isletme)}
+ `;
 
- <b>İşletme Devir</b>
- <table>
- <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
- ${devir.isletme.map((x,i)=>`
- <tr>
-  <td>${x.ad}</td>
-  <td>${x.tutar}</td>
-  <td class="actions">
-   <button class="small" onclick="duzenle('isletme',${i})">✏️</button>
-   <button class="small" onclick="sil('isletme',${i})">🗑️</button>
-  </td>
- </tr>`).join("")}
- </table>
- `
-
- topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
- topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
-
- odemeAd.innerHTML=""
- new Set(devir[odemeTip.value].map(x=>x.ad)).forEach(a=>odemeAd.add(new Option(a,a)))
+ topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺";
+ topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺";
 }
-render()
+function tablo(arr){
+ return `<table><tr><th>Ad</th><th>Tutar</th></tr>`+
+ arr.map(x=>`<tr><td>${x.ad}</td><td>${x.tutar}</td></tr>`).join("")+
+ `</table>`;
+}
+render();
 </script>
+
 </body>
 </html>
