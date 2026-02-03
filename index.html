@@ -3,139 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kurye & İşletme Takip</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<title>Kurye Takip</title>
 
 <style>
-:root{
- --bg:#0f172a;--card:#1e293b;--soft:#334155;
- --blue:#3b82f6;--red:#ef4444;--green:#22c55e;--text:#e5e7eb
-}
-*{box-sizing:border-box}
-body{
- background:var(--bg);
- color:var(--text);
- font-family:sans-serif;
- margin:0;
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f2f2f2;
 }
 
-/* 🔐 LOGIN */
-#login{
- position:fixed;
- inset:0;
- display:flex;
- align-items:center;
- justify-content:center;
- background:#020617;
- z-index:999;
-}
-#login .card{
- width:90%;
- max-width:320px;
- text-align:center;
+/* ===== ŞİFRE EKRANI ===== */
+#loginScreen {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
 }
 
-/* APP */
-#app{padding:10px}
-input,select,button{border:none;border-radius:8px;padding:8px;margin:4px 0}
-input,select{background:var(--soft);color:#fff}
-button{background:var(--blue);color:#fff;font-weight:bold}
-button.warn{background:#facc15;color:#000}
-button.small{padding:4px 6px;font-size:12px}
-.card{background:var(--card);padding:10px;border-radius:10px;margin-bottom:10px}
-.tabbar{display:flex;gap:6px;margin-bottom:10px}
-.tabbar button{flex:1}
-.active{background:var(--blue)}
-.hidden{display:none}
-table{width:100%;font-size:12px;border-collapse:collapse;margin-top:6px}
-th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
-.logo{text-align:center;font-size:48px;margin:5px 0}
-.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.summary-card{background:#020617;padding:12px;border-radius:14px}
-.pay{border-left:4px solid var(--red)}
-.get{border-left:4px solid var(--green)}
-.input-row{display:flex;gap:6px;flex-wrap:wrap}
-.input-row input{flex:1}
-.actions button{margin:0 2px}
+.login-box {
+    background: #fff;
+    width: 300px;
+    padding: 25px;
+    border-radius: 14px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+.login-box h2 {
+    margin-bottom: 20px;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.login-box button:active {
+    transform: scale(0.97);
+}
+
+#errorText {
+    margin-top: 10px;
+    color: red;
+    font-size: 14px;
+    display: none;
+}
+
+/* ===== UYGULAMA ===== */
+#app {
+    display: none;
+    padding: 15px;
+}
 </style>
 </head>
 
 <body>
 
-<!-- 🔐 ŞİFRE -->
-<div id="login">
- <div class="card">
-  <h2>🔐 Giriş</h2>
-  <input type="password" id="sifre" placeholder="Şifre">
-  <button onclick="giris()">GİRİŞ</button>
- </div>
+<!-- ===== ŞİFRE EKRANI ===== -->
+<div id="loginScreen">
+    <div class="login-box">
+        <h2>🔒 Giriş</h2>
+        <input type="password" id="passwordInput" placeholder="Şifre">
+        <button onclick="login()">GİRİŞ</button>
+        <div id="errorText">Şifre yanlış</div>
+    </div>
 </div>
 
-<div id="app" class="hidden">
+<!-- ===== UYGULAMA ALANI ===== -->
+<div id="app">
+    <h2>🚴 Kurye Takip Sistemi</h2>
+    <p>Uygulama başarıyla açıldı.</p>
 
-<div class="logo" id="logo">🛵</div>
-
-<div class="tabbar">
- <button id="tKurye" class="active" onclick="tab('kurye')">🛵 KURYELER</button>
- <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
-</div>
-
-<div id="kurye"></div>
-<div id="isletme" class="hidden"></div>
-
-<div class="card">
- <b>💳 ÖDEME</b>
- <select id="odemeTip">
-  <option value="kurye">Kurye</option>
-  <option value="isletme">İşletme</option>
- </select>
- <select id="odemeAd"></select>
- <input type="number" id="odemeTutar" placeholder="Tutar">
- <button style="width:100%" onclick="odemeGir()">ÖDEME YAP</button>
-
- <div class="summary">
-  <div class="summary-card pay">Kuryelere: <b id="topKurye">0 ₺</b></div>
-  <div class="summary-card get">İşletmelerden: <b id="topIsletme">0 ₺</b></div>
- </div>
-</div>
-
-<div style="display:flex;gap:6px">
- <button class="warn" style="flex:1" onclick="gunSonu()">GÜN SONU AL</button>
- <button style="flex:1" onclick="excelAktar()">📤 EXCEL AKTAR</button>
-</div>
-
+    <!-- 
+    🔽 BURAYA SENİN SON ÇALIŞAN KODUN GELECEK
+    Devir, günlük, excel vs. aynen buraya yapıştırılacak
+    -->
 </div>
 
 <script>
-const DOGRU_SIFRE="1234";
+const PASSWORD = "1234"; // ŞİFREN (istersen değiştir)
 
-function giris(){
- if(sifre.value===DOGRU_SIFRE){
-  login.style.display="none";
-  app.classList.remove("hidden");
- }else alert("Şifre yanlış");
+// Sayfa açılınca
+window.addEventListener("load", () => {
+    if (sessionStorage.getItem("loggedIn") === "yes") {
+        showApp();
+    }
+});
+
+// GİRİŞ BUTONU
+function login() {
+    const input = document.getElementById("passwordInput").value;
+
+    if (input === PASSWORD) {
+        sessionStorage.setItem("loggedIn", "yes");
+        showApp();
+    } else {
+        document.getElementById("errorText").style.display = "block";
+    }
 }
 
-let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]};
-let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]};
-let odemeler=JSON.parse(localStorage.getItem("odemeler"))||[];
-let last={kurye:{paket:'',ucret:''},isletme:{paket:'',ucret:''}};
-
-function save(){
- localStorage.setItem("takip",JSON.stringify(data));
- localStorage.setItem("devir",JSON.stringify(devir));
- localStorage.setItem("odemeler",JSON.stringify(odemeler));
- render();
+// Uygulamayı göster
+function showApp() {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "block";
 }
+</script>
 
-function tab(x){
- kurye.classList.add("hidden");
- isletme.classList.add("hidden");
- tKurye.classList.remove("active");
- tIsletme.classList.remove("active");
- document.getElementById(x).classList.remove("hidden");
- document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active");
- logo.innerText=x==="kurye"?"🛵":"🍕";
-}
-
-/* GERİ KALAN TÜM FONKSİYONLAR AYNI */
+</body>
+</html>
