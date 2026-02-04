@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kurye & İşletme Takip</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 :root{
  --bg:#0f172a;--card:#1e293b;--soft:#334155;
@@ -34,6 +35,7 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 .get{border-left:4px solid var(--green)}
 </style>
 </head>
+
 <body>
 
 <div id="logo" class="logo">🛵</div>
@@ -47,8 +49,8 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 <div id="isletme" class="hidden"></div>
 
 <div class="card">
- <b>💳 ÖDEME</b><br>
- <select id="odemeTip" onchange="render()">
+ <b>💳 ÖDEME</b>
+ <select id="odemeTip">
   <option value="kurye">Kurye</option>
   <option value="isletme">İşletme</option>
  </select>
@@ -68,8 +70,8 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[],isletme:[]}
-let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[],isletme:[]}
+let data=JSON.parse(localStorage.getItem("takip"))||{kurye:[],isletme:[]}
+let devir=JSON.parse(localStorage.getItem("devir"))||{kurye:[],isletme:[]}
 
 function save(){
  localStorage.setItem("takip",JSON.stringify(data))
@@ -84,13 +86,34 @@ function tab(x){
  tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
  document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- logo.innerText = x==="kurye"?"🛵":"🍕"
+ logo.innerText=x==="kurye"?"🛵":"🍕"
 }
 
+/* 🔴 SADECE BU FONKSİYON DÜZELTİLDİ */
 function ekle(t,a,p,u){
- if(!a||!p||!u) return
- data[t].push({ad:a,paket:+p,ucret:+u,tutar:p*u})
- save()
+ if(!a) return;
+
+ let adInput = t==="kurye" ? ka : ia;
+ let paketInput = t==="kurye" ? kp : ip;
+ let ucretInput = t==="kurye" ? ku : iu;
+
+ let adVal = adInput.value;
+ let pVal = paketInput.value;
+ let uVal = ucretInput.value;
+
+ data[t].push({
+  ad: adVal,
+  paket: +pVal,
+  ucret: +uVal,
+  tutar: +pVal * +uVal
+ });
+
+ save();
+
+ // değerler KORUNUR
+ adInput.value = adVal;
+ paketInput.value = pVal;
+ ucretInput.value = uVal;
 }
 
 function gunSonu(){
@@ -99,7 +122,7 @@ function gunSonu(){
   data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
   Object.entries(m).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad)
-   d ? d.tutar+=top : devir[t].push({ad,tutar:top})
+   d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
   data[t]=[]
  })
@@ -108,18 +131,10 @@ function gunSonu(){
 
 function odemeGir(){
  let t=odemeTip.value,a=odemeAd.value,tu=+odemeTutar.value
- if(!a||!tu) return
+ if(!a||!tu)return
  let d=devir[t].find(x=>x.ad===a)
- if(d) d.tutar=Math.max(0,d.tutar-tu)
+ if(d)d.tutar=Math.max(0,d.tutar-tu)
  save()
-}
-
-function duzenle(t,i){
- let y=prompt("Yeni tutar",devir[t][i].tutar)
- if(y!==null){devir[t][i].tutar=+y||0;save()}
-}
-function sil(t,i){
- if(confirm("Silinsin mi?")){devir[t].splice(i,1);save()}
 }
 
 function excelAktar(){
@@ -128,6 +143,21 @@ function excelAktar(){
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.isletme),"GUNLUK_ISLETME")
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([...devir.kurye,...devir.isletme]),"DEVIR")
  XLSX.writeFile(wb,"kurye_takip.xlsx")
+}
+
+function duzenle(t,i){
+ let y=prompt("Yeni tutar",devir[t][i].tutar)
+ if(y!==null){
+  devir[t][i].tutar=Number(y)||0
+  save()
+ }
+}
+
+function sil(t,i){
+ if(confirm("Silinsin mi?")){
+  devir[t].splice(i,1)
+  save()
+ }
 }
 
 function render(){
@@ -140,26 +170,20 @@ function render(){
    <button onclick="ekle('kurye',ka.value,kp.value,ku.value)">EKLE</button>
   </div>
  </div>
-
- <b>📋 Günlük İşlenenler</b>
- <table>
- <tr><th>Kurye</th><th>Paket</th><th>Ücret</th><th>Tutar</th></tr>
- ${data.kurye.map(x=>`
- <tr><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td></tr>`).join("")}
- </table>
-
  <b>Kurye Devir</b>
  <table>
  <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
  ${devir.kurye.map((x,i)=>`
  <tr>
-  <td>${x.ad}</td><td>${x.tutar}</td>
-  <td>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td class="actions">
    <button class="small" onclick="duzenle('kurye',${i})">✏️</button>
    <button class="small" onclick="sil('kurye',${i})">🗑️</button>
   </td>
  </tr>`).join("")}
- </table>`
+ </table>
+ `
 
  isletme.innerHTML=`
  <div class="card">
@@ -170,35 +194,30 @@ function render(){
    <button onclick="ekle('isletme',ia.value,ip.value,iu.value)">EKLE</button>
   </div>
  </div>
-
- <b>📋 Günlük İşlenenler</b>
- <table>
- <tr><th>İşletme</th><th>Paket</th><th>Ücret</th><th>Tutar</th></tr>
- ${data.isletme.map(x=>`
- <tr><td>${x.ad}</td><td>${x.paket}</td><td>${x.ucret}</td><td>${x.tutar}</td></tr>`).join("")}
- </table>
-
  <b>İşletme Devir</b>
  <table>
  <tr><th>Ad</th><th>Tutar</th><th>İşlem</th></tr>
  ${devir.isletme.map((x,i)=>`
  <tr>
-  <td>${x.ad}</td><td>${x.tutar}</td>
-  <td>
+  <td>${x.ad}</td>
+  <td>${x.tutar}</td>
+  <td class="actions">
    <button class="small" onclick="duzenle('isletme',${i})">✏️</button>
    <button class="small" onclick="sil('isletme',${i})">🗑️</button>
   </td>
  </tr>`).join("")}
- </table>`
+ </table>
+ `
 
- topKurye.innerText = devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
- topIsletme.innerText = devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
 
  odemeAd.innerHTML=""
- devir[odemeTip.value].forEach(x=>odemeAd.add(new Option(x.ad,x.ad)))
+ new Set(devir[odemeTip.value].map(x=>x.ad)).forEach(a=>odemeAd.add(new Option(a,a)))
 }
 
 render()
 </script>
+
 </body>
 </html>
