@@ -45,8 +45,41 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
  <button id="tIsletme" onclick="tab('isletme')">🍕 İŞLETMELER</button>
 </div>
 
-<div id="kurye"></div>
-<div id="isletme" class="hidden"></div>
+<!-- KURYE -->
+<div id="kurye">
+ <div class="card">
+  <div class="input-row">
+   <input id="ka" placeholder="Kurye">
+   <input id="kp" type="number" placeholder="Paket">
+   <input id="ku" type="number" placeholder="Ücret">
+   <button onclick="ekle('kurye')">EKLE</button>
+  </div>
+ </div>
+
+ <b>📋 Günlük Kurye</b>
+ <div id="gunlukKurye"></div>
+
+ <b>🔁 Kurye Devir</b>
+ <div id="devirKurye"></div>
+</div>
+
+<!-- ISLETME -->
+<div id="isletme" class="hidden">
+ <div class="card">
+  <div class="input-row">
+   <input id="ia" placeholder="İşletme">
+   <input id="ip" type="number" placeholder="Paket">
+   <input id="iu" type="number" placeholder="Ücret">
+   <button onclick="ekle('isletme')">EKLE</button>
+  </div>
+ </div>
+
+ <b>📋 Günlük İşletme</b>
+ <div id="gunlukIsletme"></div>
+
+ <b>🔁 İşletme Devir</b>
+ <div id="devirIsletme"></div>
+</div>
 
 <div class="card">
  <b>💳 ÖDEME</b>
@@ -70,46 +103,35 @@ th,td{padding:6px;border-bottom:1px solid var(--soft);text-align:center}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[], isletme:[]}
-let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[], isletme:[]}
+let data = JSON.parse(localStorage.getItem("takip")) || {kurye:[],isletme:[]}
+let devir = JSON.parse(localStorage.getItem("devir")) || {kurye:[],isletme:[]}
 
 function save(){
- localStorage.setItem("takip", JSON.stringify(data))
- localStorage.setItem("devir", JSON.stringify(devir))
+ localStorage.setItem("takip",JSON.stringify(data))
+ localStorage.setItem("devir",JSON.stringify(devir))
  render()
 }
 
 function tab(x){
  kurye.classList.add("hidden")
  isletme.classList.add("hidden")
- tKurye.classList.remove("active")
- tIsletme.classList.remove("active")
  document.getElementById(x).classList.remove("hidden")
- document.getElementById("t"+x.charAt(0).toUpperCase()+x.slice(1)).classList.add("active")
- logo.innerText = x==="kurye" ? "🛵" : "🍕"
+ logo.innerText = x==="kurye"?"🛵":"🍕"
 }
 
 function ekle(t){
- let a = document.getElementById(t==="kurye"?"ka":"ia")
- let p = document.getElementById(t==="kurye"?"kp":"ip")
- let u = document.getElementById(t==="kurye"?"ku":"iu")
-
- if(!a.value) return
-
- let ad=a.value, paket=p.value, ucret=u.value
+ let a=document.getElementById(t==="kurye"?"ka":"ia")
+ let p=document.getElementById(t==="kurye"?"kp":"ip")
+ let u=document.getElementById(t==="kurye"?"ku":"iu")
+ if(!a.value)return
 
  data[t].push({
-  ad,
-  paket:+paket,
-  ucret:+ucret,
-  tutar:+paket * +ucret
+  ad:a.value,
+  paket:+p.value,
+  ucret:+u.value,
+  tutar:+p.value * +u.value
  })
-
  save()
-
- a.value=ad
- p.value=paket
- u.value=ucret
 }
 
 function gunSonu(){
@@ -118,7 +140,7 @@ function gunSonu(){
   data[t].forEach(x=>m[x.ad]=(m[x.ad]||0)+x.tutar)
   Object.entries(m).forEach(([ad,top])=>{
    let d=devir[t].find(x=>x.ad===ad)
-   d ? d.tutar+=top : devir[t].push({ad,tutar:top})
+   d?d.tutar+=top:devir[t].push({ad,tutar:top})
   })
   data[t]=[]
  })
@@ -133,6 +155,29 @@ function odemeGir(){
  save()
 }
 
+function tablo(arr,islem){
+ if(!arr.length) return "<i>Boş</i>"
+ return `<table>
+ <tr>${Object.keys(arr[0]).map(k=>`<th>${k}</th>`).join("")}${islem?"<th></th>":""}</tr>
+ ${arr.map((x,i)=>`
+ <tr>
+ ${Object.values(x).map(v=>`<td>${v}</td>`).join("")}
+ ${islem?`<td>
+ <button class="small" onclick="duzenle('${islem}',${i})">✏️</button>
+ <button class="small" onclick="sil('${islem}',${i})">🗑️</button>
+ </td>`:""}
+ </tr>`).join("")}
+ </table>`
+}
+
+function duzenle(t,i){
+ let y=prompt("Yeni tutar",devir[t][i].tutar)
+ if(y!==null){devir[t][i].tutar=+y||0;save()}
+}
+function sil(t,i){
+ if(confirm("Silinsin mi?")){devir[t].splice(i,1);save()}
+}
+
 function excelAktar(){
  let wb=XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.kurye),"GUNLUK_KURYE")
@@ -144,53 +189,14 @@ function excelAktar(){
  XLSX.writeFile(wb,"kurye_takip.xlsx")
 }
 
-function duzenle(t,i){
- let y=prompt("Yeni tutar",devir[t][i].tutar)
- if(y!==null){devir[t][i].tutar=+y||0;save()}
-}
-function sil(t,i){
- if(confirm("Silinsin mi?")){devir[t].splice(i,1);save()}
-}
-
 function render(){
- kurye.innerHTML=`
- <div class="card">
-  <div class="input-row">
-   <input id="ka" placeholder="Kurye">
-   <input id="kp" type="number" placeholder="Paket">
-   <input id="ku" type="number" placeholder="Ücret">
-   <button onclick="ekle('kurye')">EKLE</button>
-  </div>
- </div>
- <b>Kurye Devir</b>
- ${devir.kurye.length?`<table><tr><th>Ad</th><th>Tutar</th><th></th></tr>
- ${devir.kurye.map((x,i)=>`
- <tr><td>${x.ad}</td><td>${x.tutar}</td>
- <td><button class="small" onclick="duzenle('kurye',${i})">✏️</button>
- <button class="small" onclick="sil('kurye',${i})">🗑️</button></td></tr>`).join("")}
- </table>`:""}
- `
+ gunlukKurye.innerHTML = tablo(data.kurye)
+ gunlukIsletme.innerHTML = tablo(data.isletme)
+ devirKurye.innerHTML = tablo(devir.kurye,"kurye")
+ devirIsletme.innerHTML = tablo(devir.isletme,"isletme")
 
- isletme.innerHTML=`
- <div class="card">
-  <div class="input-row">
-   <input id="ia" placeholder="İşletme">
-   <input id="ip" type="number" placeholder="Paket">
-   <input id="iu" type="number" placeholder="Ücret">
-   <button onclick="ekle('isletme')">EKLE</button>
-  </div>
- </div>
- <b>İşletme Devir</b>
- ${devir.isletme.length?`<table><tr><th>Ad</th><th>Tutar</th><th></th></tr>
- ${devir.isletme.map((x,i)=>`
- <tr><td>${x.ad}</td><td>${x.tutar}</td>
- <td><button class="small" onclick="duzenle('isletme',${i})">✏️</button>
- <button class="small" onclick="sil('isletme',${i})">🗑️</button></td></tr>`).join("")}
- </table>`:""}
- `
-
- topKurye.innerText=devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
- topIsletme.innerText=devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topKurye.innerText = devir.kurye.reduce((a,b)=>a+b.tutar,0)+" ₺"
+ topIsletme.innerText = devir.isletme.reduce((a,b)=>a+b.tutar,0)+" ₺"
 
  odemeAd.innerHTML=""
  devir[odemeTip.value].forEach(x=>odemeAd.add(new Option(x.ad,x.ad)))
@@ -198,6 +204,5 @@ function render(){
 
 render()
 </script>
-
 </body>
 </html>
